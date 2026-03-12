@@ -32,6 +32,37 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, hasSupabaseUrl: !!process.env.SUPABASE_URL });
 });
 
+// ── Simple in-memory rate limiter ────────────────────────────
+const rateLimits = new Map();
+const RATE_LIMIT = { windowMs: 60000, max: 100 }; // 100 requests per minute
+
+function rateLimit(req, res, next) {
+  const key = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const now = Date.now();
+  const entry = rateLimits.get(key);
+
+  if (!entry || now - entry.start > RATE_LIMIT.windowMs) {
+    rateLimits.set(key, { start: now, count: 1 });
+    return next();
+  }
+
+  entry.count++;
+  if (entry.count > RATE_LIMIT.max) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  }
+  next();
+}
+
+// Cleanup old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimits) {
+    if (now - entry.start > RATE_LIMIT.windowMs) rateLimits.delete(key);
+  }
+}, 300000);
+
+app.use('/api', rateLimit);
+
 // ── Auth middleware ───────────────────────────────────────
 app.use('/api', requireAuth);
 

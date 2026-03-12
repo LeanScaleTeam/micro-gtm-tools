@@ -1,6 +1,8 @@
-# GTM Planning Tools
+# Micro GTM Tools
 
-Seven interactive B2B go-to-market planning tools, built as single-page HTML apps with a shared dark theme and Supabase auth + state persistence.
+Seven interactive B2B go-to-market planning tools with shared dark theme and Supabase auth.
+
+**Live:** https://microgtmtools.netlify.app
 
 ## Tools
 
@@ -8,28 +10,31 @@ Seven interactive B2B go-to-market planning tools, built as single-page HTML app
 |------|-------------|
 | **SaaS Growth Model** | Multi-segment 24-month revenue, headcount, and profitability projections |
 | **ICP Matrix** | Ideal Customer Profile and Persona matrix builder with tier-based scoring |
-| **Sales Capacity Planner** | Rep-level capacity forecasting with ramp schedules and segment templates |
-| **Marketing Channel Planner** | Channel-level budget allocation with pipeline and funnel projections |
-| **GTM Lifecycle Builder** | Define lifecycle stages with entry/exit criteria, owners, and visual flow |
-| **Quote-to-Cash Mapper** | Map quote-to-cash processes across Sales-Led, PLG, Hybrid, and Partner flows |
-| **Lead Source Taxonomy** | Build and organize lead source taxonomy with attribution methodology |
+| **Sales Capacity Planner** | Rep-level capacity forecasting with ramp schedules |
+| **Marketing Channel Planner** | Channel-level budget allocation with pipeline projections |
+| **GTM Lifecycle Builder** | Lifecycle stages with entry/exit criteria and visual flow |
+| **Quote-to-Cash Mapper** | Quote-to-cash processes across Sales-Led, PLG, Hybrid, and Partner flows |
+| **Lead Source Taxonomy** | Lead source taxonomy with attribution methodology |
 
-## Setup
+## Local Development
 
 ```bash
-cp .env.example .env
-# Fill in Supabase credentials
 npm install
-npm run dev
+cp .env.example .env  # Add Supabase credentials
+npm run dev           # http://localhost:3850
 ```
 
-## Deploy
+## Environment Variables
 
-Deployed via Netlify. Environment variables are injected at build time into `public/lib/env.js`.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Yes | Supabase public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-side) |
 
-## Architecture
+## Stack
 
-- **Frontend:** Vanilla HTML/JS with shared `theme.css` and `nav.js`
-- **Backend:** Express API (tool state CRUD only) via Netlify Functions
-- **Auth:** Supabase Auth with shared `auth-client.js`
-- **Storage:** JSONB sections in `mc_configs` / `mc_config_sections` tables
+- Vanilla JS SPA, Express 5, Supabase Auth, Netlify Functions, JSONB sections storage
+
+---
+*Part of the [LeanScale Microapp Suite](https://lsapps.netlify.app)*
