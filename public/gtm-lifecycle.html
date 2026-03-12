@@ -252,6 +252,101 @@
       line-height: 1.5;
     }
     
+    /* Conversion Rates */
+    .conversion-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid var(--accent-purple);
+    }
+
+    .conversion-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 20px 1fr;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .conversion-row .stage-label {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .conversion-row .stage-label-right {
+      font-weight: 500;
+    }
+
+    .conversion-input {
+      width: 70px;
+      padding: 6px 8px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .conversion-arrow {
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* Back-calculate section */
+    .backcalc-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border-left: 4px solid var(--accent-green);
+    }
+
+    .backcalc-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .backcalc-result {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .backcalc-item {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .backcalc-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+
+    .backcalc-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    /* Flow conversion badges */
+    .flow-conversion {
+      font-size: 10px;
+      color: var(--accent-green);
+      font-weight: 600;
+      padding: 2px 6px;
+      background: rgba(63, 185, 80, 0.15);
+      border-radius: 4px;
+    }
+
     /* Print overrides */
     @media print {
       .stage-actions { display: none !important; }
@@ -286,6 +381,7 @@
     <div class="header-actions">
       <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
       <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportLifecycleCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -319,6 +415,30 @@
         <div class="card-title" id="detail-title">📊 Full Lifecycle Summary</div>
         <div id="detail-content">
           <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Conversion Rates -->
+      <div class="card">
+        <div class="card-title">📈 Stage Conversion Rates</div>
+        <div id="conversion-rates">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Back-calculate from bookings target -->
+        <div class="backcalc-section">
+          <div class="backcalc-title">🎯 Back-Calculate from Bookings Target</div>
+          <div class="input-group">
+            <label class="input-label">Annual Bookings Target ($)</label>
+            <input type="text" class="input-field" id="bookings-target" value="1,000,000" oninput="updateBackCalc()">
+          </div>
+          <div class="input-group" style="margin-top:8px;">
+            <label class="input-label">Avg Deal Size ($)</label>
+            <input type="text" class="input-field" id="avg-deal-size" value="50,000" oninput="updateBackCalc()">
+          </div>
+          <div id="backcalc-results" class="backcalc-result">
+            <!-- Populated by JS -->
+          </div>
         </div>
       </div>
     </div>
@@ -378,6 +498,7 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
   <script>
     // Default stages
     const DEFAULT_STAGES = [
@@ -541,12 +662,17 @@
       
       container.innerHTML = stages.map((stage, idx) => {
         const ownerClass = getOwnerClass(stage.owner);
+        let arrow = '';
+        if (idx < stages.length - 1) {
+          const rate = getConversionRate(stage.id, stages[idx + 1].id);
+          arrow = `<span class="flow-arrow">→ <span class="flow-conversion">${rate}%</span></span>`;
+        }
         return `
           <div class="flow-stage owner-${ownerClass}">
             ${stage.name}
             <span class="owner-badge">${stage.owner.split(' ')[0]}</span>
           </div>
-          ${idx < stages.length - 1 ? '<span class="flow-arrow">→</span>' : ''}
+          ${arrow}
         `;
       }).join('');
     }
@@ -629,10 +755,103 @@
       }
     }
 
+    // Conversion rates stored per stage-pair
+    let conversionRates = {};
+
+    function getConversionKey(fromId, toId) {
+      return fromId + '->' + toId;
+    }
+
+    function getConversionRate(fromId, toId) {
+      const key = getConversionKey(fromId, toId);
+      return conversionRates[key] !== undefined ? conversionRates[key] : 50;
+    }
+
+    function setConversionRate(fromId, toId, value) {
+      conversionRates[fromId + '->' + toId] = Math.max(0, Math.min(100, parseFloat(value) || 0));
+      updateBackCalc();
+      saveToStorage();
+    }
+
+    function renderConversionRates() {
+      const container = document.getElementById('conversion-rates');
+      if (stages.length < 2) {
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:12px;text-align:center;padding:12px;">Add at least 2 stages to set conversion rates</div>';
+        return;
+      }
+
+      let html = '';
+      for (let i = 0; i < stages.length - 1; i++) {
+        const from = stages[i];
+        const to = stages[i + 1];
+        const rate = getConversionRate(from.id, to.id);
+        html += `
+          <div class="conversion-row">
+            <span class="stage-label">${from.name}</span>
+            <input type="number" class="conversion-input" min="0" max="100" step="1"
+                   value="${rate}"
+                   onchange="setConversionRate('${from.id}', '${to.id}', this.value)"
+                   oninput="setConversionRate('${from.id}', '${to.id}', this.value)">
+            <span class="conversion-arrow">%→</span>
+            <span class="stage-label-right">${to.name}</span>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function parseNumSimple(str) {
+      return parseFloat(String(str).replace(/[,$%]/g, '')) || 0;
+    }
+
+    function updateBackCalc() {
+      const container = document.getElementById('backcalc-results');
+      if (stages.length < 2) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const bookingsTarget = parseNumSimple(document.getElementById('bookings-target').value);
+      const avgDeal = parseNumSimple(document.getElementById('avg-deal-size').value) || 50000;
+      const dealsNeeded = Math.ceil(bookingsTarget / avgDeal);
+
+      // Work backwards: last stage needs dealsNeeded, each prior stage needs more based on conversion
+      const stageVolumes = [];
+      stageVolumes[stages.length - 1] = { name: stages[stages.length - 1].name, volume: dealsNeeded };
+
+      for (let i = stages.length - 2; i >= 0; i--) {
+        const rate = getConversionRate(stages[i].id, stages[i + 1].id) / 100;
+        const needed = rate > 0 ? Math.ceil(stageVolumes[i + 1].volume / rate) : 0;
+        stageVolumes[i] = { name: stages[i].name, volume: needed };
+      }
+
+      let html = '';
+      stageVolumes.forEach(sv => {
+        html += `
+          <div class="backcalc-item">
+            <div class="backcalc-value">${sv.volume.toLocaleString()}</div>
+            <div class="backcalc-label">${sv.name}</div>
+          </div>
+        `;
+      });
+
+      // Add the bookings target as context
+      html += `
+        <div class="backcalc-item" style="border-left:2px solid var(--accent-green);">
+          <div class="backcalc-value" style="color:var(--accent-green);">$${(bookingsTarget/1000).toFixed(0)}K</div>
+          <div class="backcalc-label">Bookings Target</div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
     function renderAll() {
       renderStageList();
       renderFlow();
       renderDetail();
+      renderConversionRates();
+      updateBackCalc();
     }
 
     function selectStage(id) {
@@ -784,19 +1003,6 @@
       draggedItem = null;
     }
 
-    // Storage
-    function saveToStorage() {
-      AuthUI.apiFetch('/api/tools/gtm-lifecycle/state', { method: 'PUT', body: JSON.stringify(stages) });
-    }
-
-    async function loadStages() {
-      try {
-        const resp = await AuthUI.apiFetch('/api/tools/gtm-lifecycle/state');
-        const data = await resp.json();
-        return (data && Array.isArray(data) && data.length > 0) ? data : getDefaultStages();
-      } catch { return getDefaultStages(); }
-    }
-
     // Export
     function exportJSON() {
       const data = {
@@ -813,8 +1019,46 @@
       URL.revokeObjectURL(url);
     }
 
+    function exportLifecycleCSV() {
+      const rows = stages.map((stage, idx) => {
+        const convRate = idx < stages.length - 1 ? getConversionRate(stage.id, stages[idx + 1].id) + '%' : 'N/A';
+        return {
+          order: idx + 1,
+          name: stage.name,
+          object: stage.object,
+          owner: stage.owner,
+          entry_criteria: (stage.entry || '').replace(/\n/g, '; '),
+          exit_criteria: (stage.exit || '').replace(/\n/g, '; '),
+          conversion_to_next: convRate
+        };
+      });
+      exportCSV(rows, 'gtm-lifecycle.csv');
+    }
+
     function exportPDF() {
       window.print();
+    }
+
+    // Storage - updated to include conversion rates
+    function saveToStorage() {
+      const data = { stages, conversionRates };
+      AuthUI.apiFetch('/api/tools/gtm-lifecycle/state', { method: 'PUT', body: JSON.stringify(data) });
+    }
+
+    async function loadStages() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/gtm-lifecycle/state');
+        const data = await resp.json();
+        // Handle both old format (array) and new format (object with stages + conversionRates)
+        if (data && Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+        if (data && data.stages && Array.isArray(data.stages) && data.stages.length > 0) {
+          if (data.conversionRates) conversionRates = data.conversionRates;
+          return data.stages;
+        }
+        return getDefaultStages();
+      } catch { return getDefaultStages(); }
     }
 
     // Init

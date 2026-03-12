@@ -371,6 +371,7 @@
     <div class="header-actions">
       <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
       <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportQTCCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -488,6 +489,7 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
   <script>
     // Flow configurations
     const FLOWS = {
@@ -864,6 +866,17 @@
       a.download = 'quote-to-cash-process.json';
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function exportQTCCSV() {
+      const rows = stages.map((s, idx) => ({
+        order: idx + 1,
+        name: s.name,
+        tool: s.tool,
+        description: s.description || '',
+        flows: s.flows.map(f => FLOWS[f] ? FLOWS[f].name : f).join('; ')
+      }));
+      exportCSV(rows, 'quote-to-cash-process.csv');
     }
 
     function exportPDF() {

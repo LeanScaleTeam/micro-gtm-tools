@@ -164,6 +164,88 @@
     }
 
     .modal { width: 400px; }
+
+    /* Attrition Section */
+    .attrition-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid var(--accent-red);
+    }
+
+    .attrition-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-red);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .attrition-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .attrition-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .attrition-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .attrition-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    .hiring-timeline {
+      margin-top: 12px;
+    }
+
+    .hiring-item {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .hiring-month {
+      font-weight: 600;
+      color: var(--accent-blue);
+    }
+
+    .hiring-action {
+      color: var(--text-secondary);
+    }
+
+    .capacity-gap-positive { color: var(--accent-green); font-weight: 600; }
+    .capacity-gap-negative { color: var(--accent-red); font-weight: 600; }
+
+    /* Cross-Reference Banner */
+    .cross-ref-banner {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .cross-ref-title { font-size: 11px; font-weight: 600; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .cross-ref-items { display: flex; gap: 24px; flex-wrap: wrap; }
+    .cross-ref-item { display: flex; flex-direction: column; gap: 2px; }
+    .cross-ref-label { font-size: 11px; color: var(--text-secondary); }
+    .cross-ref-value { font-size: 14px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -189,6 +271,7 @@
     <div class="header-actions">
       <button class="btn" onclick="calculate()">📊 Calculate</button>
       <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportCapacityCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -210,6 +293,8 @@
   </div>
 
   <div id="main-content">
+  <!-- Cross-Reference Banner (MGT-E1) -->
+  <div id="cross-ref-container"></div>
   <div class="layout">
     <!-- Left Panel: Config -->
     <div>
@@ -245,6 +330,17 @@
         <div class="input-group">
           <label class="input-label">Plan Start Date</label>
           <input type="date" class="input-field" id="planStart" value="2026-03-01">
+        </div>
+        <div class="section-title" style="color:var(--accent-red);">Rep Attrition</div>
+        <div class="input-group">
+          <label class="input-label">Annual Attrition Rate (%)</label>
+          <input type="text" class="input-field" id="attritionRate" value="20">
+          <div style="font-size:10px;color:var(--text-secondary);margin-top:4px;">Percentage of reps who leave per year (industry avg: 20-35%)</div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Hiring Lag (months)</label>
+          <input type="text" class="input-field" id="hiringLag" value="3">
+          <div style="font-size:10px;color:var(--text-secondary);margin-top:4px;">Months from posting job to rep starting</div>
         </div>
       </div>
     </div>
@@ -299,6 +395,21 @@
             <tr><td colspan="7" class="muted" style="text-align:center">Add segments and reps to see forecast</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Attrition Impact -->
+      <div class="attrition-section" id="attrition-section" style="display:none;">
+        <div class="attrition-title">📉 Rep Attrition Impact</div>
+        <div class="attrition-summary" id="attrition-summary">
+          <!-- Populated by JS -->
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Hiring Timeline</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;">
+          To maintain capacity after attrition, post job openings by these dates:
+        </div>
+        <div class="hiring-timeline" id="hiring-timeline">
+          <!-- Populated by JS -->
+        </div>
       </div>
     </div>
   </div>
@@ -367,6 +478,8 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
+  <script src="/lib/cross-reference.js"></script>
   <script>
     let segments = [];
     let reps = [];
@@ -793,6 +906,120 @@
       });
 
       document.getElementById('capacity-body').innerHTML = html || '<tr><td colspan="7" class="muted">Add reps to see forecast</td></tr>';
+
+      // Calculate attrition impact
+      calculateAttrition();
+    }
+
+    // Attrition Analysis
+    function calculateAttrition() {
+      if (reps.length === 0) {
+        document.getElementById('attrition-section').style.display = 'none';
+        return;
+      }
+
+      const planStart = new Date(document.getElementById('planStart').value);
+      const attritionRate = parseNum(document.getElementById('attritionRate').value) / 100;
+      const hiringLag = parseInt(parseNum(document.getElementById('hiringLag').value)) || 3;
+      const attainmentPct = parseNum(document.getElementById('attainmentPct').value) / 100;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      const monthlyAttrition = attritionRate / 12;
+
+      // Build month-by-month attrition model
+      let activeReps = reps.length;
+      let effectiveCapacity = 0;
+      let baseCapacity = 0;
+      let totalLost = 0;
+      const hiringNeeds = [];
+
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(planStart);
+        d.setMonth(d.getMonth() + i);
+        const label = monthNames[d.getMonth()] + " '" + String(d.getFullYear()).slice(2);
+
+        // Reps leaving this month (distributed evenly)
+        const repsLeaving = Math.round(activeReps * monthlyAttrition * 10) / 10;
+        const repsLeavingInt = i % Math.round(1 / monthlyAttrition) === 0 ? Math.ceil(repsLeaving) : Math.floor(repsLeaving);
+        const actualLeavers = Math.min(repsLeavingInt, activeReps);
+
+        if (actualLeavers > 0) {
+          totalLost += actualLeavers;
+          // Need to post job hiringLag months before this date
+          const postDate = new Date(d);
+          postDate.setMonth(postDate.getMonth() - hiringLag);
+          const postLabel = monthNames[postDate.getMonth()] + " '" + String(postDate.getFullYear()).slice(2);
+          hiringNeeds.push({
+            lossMonth: label,
+            postMonth: postLabel,
+            postDate: postDate,
+            count: actualLeavers
+          });
+        }
+
+        activeReps = Math.max(0, activeReps - actualLeavers);
+
+        // Calculate capacities for this month
+        let monthQuota = 0;
+        let monthExpected = 0;
+        reps.forEach(rep => {
+          const seg = segments.find(s => s.id === rep.segmentId);
+          if (!seg) return;
+          const repStart = new Date(rep.startDate);
+          if (repStart <= d) {
+            const monthsActive = (d.getFullYear() - repStart.getFullYear()) * 12 + (d.getMonth() - repStart.getMonth());
+            const rampIndex = Math.min(monthsActive, seg.ramp.length - 1);
+            const rampPct = seg.ramp[rampIndex] / 100;
+            const monthlyQuota = (rep.quotaOverride || seg.quota) / 12;
+            monthQuota += monthlyQuota;
+            monthExpected += monthlyQuota * rampPct * attainmentPct;
+          }
+        });
+
+        baseCapacity += monthExpected;
+        // Effective = base * (activeReps / totalReps)
+        const ratio = reps.length > 0 ? activeReps / reps.length : 0;
+        effectiveCapacity += monthExpected * ratio;
+      }
+
+      const capacityLoss = baseCapacity - effectiveCapacity;
+
+      // Render summary
+      document.getElementById('attrition-section').style.display = 'block';
+      document.getElementById('attrition-summary').innerHTML = `
+        <div class="attrition-card">
+          <div class="attrition-value" style="color:var(--accent-red);">${totalLost}</div>
+          <div class="attrition-label">Reps Lost (24mo)</div>
+        </div>
+        <div class="attrition-card">
+          <div class="attrition-value">${formatCurrency(baseCapacity)}</div>
+          <div class="attrition-label">Base Capacity</div>
+        </div>
+        <div class="attrition-card">
+          <div class="attrition-value" style="color:var(--accent-orange);">${formatCurrency(effectiveCapacity)}</div>
+          <div class="attrition-label">After Attrition</div>
+        </div>
+        <div class="attrition-card">
+          <div class="attrition-value ${capacityLoss > 0 ? 'capacity-gap-negative' : 'capacity-gap-positive'}">-${formatCurrency(capacityLoss)}</div>
+          <div class="attrition-label">Capacity Gap</div>
+        </div>
+      `;
+
+      // Render hiring timeline
+      let html = '';
+      if (hiringNeeds.length === 0) {
+        html = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:12px;">No attrition expected with current settings</div>';
+      } else {
+        hiringNeeds.forEach((need, idx) => {
+          html += `
+            <div class="hiring-item">
+              <span class="hiring-month">${need.postMonth}</span>
+              <span class="hiring-action">Post ${need.count} job${need.count > 1 ? 's' : ''} (replacement needed by ${need.lossMonth})</span>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('hiring-timeline').innerHTML = html;
     }
 
     // Initialize with default segment
@@ -834,6 +1061,45 @@
       window.print();
     }
 
+    function exportCapacityCSV() {
+      // Build capacity data from current state
+      const planStart = new Date(document.getElementById('planStart').value);
+      const attainmentPct = parseNum(document.getElementById('attainmentPct').value) / 100;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const rows = [];
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(planStart);
+        d.setMonth(d.getMonth() + i);
+        const label = monthNames[d.getMonth()] + " '" + String(d.getFullYear()).slice(2);
+        let totalReps = 0, fullyRamped = 0, totalRampPct = 0, quotaCap = 0, expectedCap = 0;
+        reps.forEach(rep => {
+          const seg = segments.find(s => s.id === rep.segmentId);
+          if (!seg) return;
+          const repStart = new Date(rep.startDate);
+          if (repStart <= d) {
+            totalReps++;
+            const monthsActive = (d.getFullYear() - repStart.getFullYear()) * 12 + (d.getMonth() - repStart.getMonth());
+            const rampIndex = Math.min(monthsActive, seg.ramp.length - 1);
+            const rampPct = seg.ramp[rampIndex] / 100;
+            totalRampPct += rampPct;
+            const monthlyQuota = (rep.quotaOverride || seg.quota) / 12;
+            quotaCap += monthlyQuota;
+            expectedCap += monthlyQuota * rampPct;
+            if (rampPct >= 1) fullyRamped++;
+          }
+        });
+        rows.push({
+          month: label,
+          reps: totalReps,
+          fully_ramped: fullyRamped,
+          avg_ramp_pct: totalReps > 0 ? ((totalRampPct / totalReps) * 100).toFixed(0) : '0',
+          quota_capacity: quotaCap.toFixed(0),
+          expected_capacity: (expectedCap * attainmentPct).toFixed(0)
+        });
+      }
+      exportCSV(rows, 'sales-capacity-plan.csv');
+    }
+
     function exportToolJSON() {
       const data = {
         name: 'Sales Capacity Planner',
@@ -864,7 +1130,9 @@
           segments: segments,
           reps: reps,
           attainmentPct: document.getElementById('attainmentPct').value,
-          planStart: document.getElementById('planStart').value
+          planStart: document.getElementById('planStart').value,
+          attritionRate: document.getElementById('attritionRate').value,
+          hiringLag: document.getElementById('hiringLag').value
         };
         await AuthUI.apiFetch('/api/tools/sales-capacity/state', {
           method: 'PUT',
@@ -885,6 +1153,8 @@
         reps = data.reps || [];
         if (data.attainmentPct) document.getElementById('attainmentPct').value = data.attainmentPct;
         if (data.planStart) document.getElementById('planStart').value = data.planStart;
+        if (data.attritionRate) document.getElementById('attritionRate').value = data.attritionRate;
+        if (data.hiringLag) document.getElementById('hiringLag').value = data.hiringLag;
 
         renderSegments();
         renderReps();
@@ -894,11 +1164,20 @@
       } catch (e) { console.warn('Load failed:', e); return false; }
     }
 
+    // ── Cross-Reference (MGT-E1) ──
+    async function loadCrossReference() {
+      try {
+        const data = await CrossReference.fetch();
+        if (data) CrossReference.renderBanner('cross-ref-container', 'sales-capacity');
+      } catch (e) { console.warn('Cross-ref load failed:', e); }
+    }
+
     // Auth wiring
     AuthUI.onLogin(async () => {
       const loaded = await loadFromStorage();
       if (!loaded) initDefaults();
       checkEmptyState();
+      loadCrossReference();
     });
     AuthUI.init();
   </script>

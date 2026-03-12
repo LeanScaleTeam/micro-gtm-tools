@@ -134,6 +134,99 @@
       padding: 40px;
       color: var(--text-secondary);
     }
+
+    /* Sensitivity Analysis */
+    .sensitivity-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid var(--accent-orange);
+    }
+
+    .sensitivity-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .sensitivity-slider-group {
+      margin-bottom: 16px;
+    }
+
+    .sensitivity-slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .sensitivity-slider-label span:first-child {
+      font-weight: 500;
+    }
+
+    .sensitivity-slider-value {
+      font-weight: 600;
+      color: var(--accent-orange);
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .sensitivity-slider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--bg-input);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .sensitivity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      cursor: pointer;
+    }
+
+    .sensitivity-comparison {
+      margin-top: 16px;
+    }
+
+    .sensitivity-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .sensitivity-table th {
+      text-align: left;
+      padding: 8px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .sensitivity-table td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sensitivity-table .delta-positive {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .sensitivity-table .delta-negative {
+      color: var(--accent-red);
+      font-weight: 600;
+    }
     
     .color-enterprise { border-left-color: var(--accent-purple); }
     .color-midmarket { border-left-color: var(--accent-blue); }
@@ -151,6 +244,83 @@
     }
     
     .delete-segment:hover { opacity: 1; }
+
+    /* Cross-Reference Banner */
+    .cross-ref-banner {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .cross-ref-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .cross-ref-items { display: flex; gap: 24px; flex-wrap: wrap; }
+    .cross-ref-item { display: flex; flex-direction: column; gap: 2px; }
+    .cross-ref-label { font-size: 11px; color: var(--text-secondary); }
+    .cross-ref-value { font-size: 14px; font-weight: 600; }
+
+    /* ARR Waterfall Chart */
+    .waterfall-container {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid var(--accent-blue);
+    }
+    .waterfall-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .waterfall-svg { width: 100%; max-width: 700px; }
+
+    /* Efficiency Metrics */
+    .efficiency-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid var(--accent-green);
+    }
+    .efficiency-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .efficiency-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) { .efficiency-grid { grid-template-columns: repeat(2, 1fr); } }
+    .efficiency-card {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .efficiency-card-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .efficiency-card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; }
+    .efficiency-card-hint { font-size: 10px; color: var(--text-secondary); margin-top: 6px; }
+    .efficiency-inputs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) { .efficiency-inputs { grid-template-columns: repeat(2, 1fr); } }
+    .rating-good { color: var(--accent-green); }
+    .rating-ok { color: var(--accent-yellow); }
+    .rating-poor { color: var(--accent-red); }
   </style>
 </head>
 <body>
@@ -177,6 +347,7 @@
       <button class="btn btn-green" onclick="addSegment()">+ Add Segment</button>
       <button class="btn" onclick="calculateAll()">📊 Generate Plan</button>
       <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportGrowthCSV()">📥 Export CSV</button>
     </div>
   </div>
 
@@ -265,8 +436,82 @@
     </div>
   </div>
 
+  <!-- Cross-Reference Banner (MGT-E1) -->
+  <div id="cross-ref-container"></div>
+
+  <!-- ARR Waterfall Chart (MGT-E2) -->
+  <div id="waterfall-section" class="card" style="display:none;">
+    <div class="waterfall-title">ARR Waterfall Bridge (24-Month)</div>
+    <div id="waterfall-chart"></div>
+  </div>
+
+  <!-- Efficiency Metrics (MGT-E3) -->
+  <div id="efficiency-section" class="card" style="display:none;">
+    <div class="efficiency-title">SaaS Efficiency Metrics</div>
+    <div class="efficiency-inputs">
+      <div class="input-group">
+        <label class="input-label">Gross Margin %</label>
+        <input type="text" class="input-field" id="eff-grossMargin" value="75">
+      </div>
+      <div class="input-group">
+        <label class="input-label">S&M Spend (Annual)</label>
+        <input type="text" class="input-field" id="eff-smSpend" value="500,000">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Revenue Growth Rate %</label>
+        <input type="text" class="input-field" id="eff-growthRate" value="100">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Profit Margin %</label>
+        <input type="text" class="input-field" id="eff-profitMargin" value="15">
+      </div>
+    </div>
+    <div class="efficiency-grid" id="efficiency-metrics">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
   <!-- Segment Panels Container -->
   <div id="segment-panels"></div>
+
+  <!-- Sensitivity Analysis -->
+  <div id="sensitivity-panel" class="card" style="display:none;">
+    <div class="sensitivity-title">🔬 Sensitivity Analysis (vs. Base Case)</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+      Adjust variables below to see impact on key metrics. Base case uses values from your first segment.
+    </p>
+
+    <div class="sensitivity-slider-group">
+      <div class="sensitivity-slider-label">
+        <span>Churn Rate (Annual)</span>
+        <span class="sensitivity-slider-value" id="sens-churn-value">10%</span>
+      </div>
+      <input type="range" class="sensitivity-slider" id="sens-churn" min="0" max="30" step="0.5" value="10"
+             oninput="updateSensitivity()">
+    </div>
+
+    <div class="sensitivity-slider-group">
+      <div class="sensitivity-slider-label">
+        <span>Growth Rate (Monthly)</span>
+        <span class="sensitivity-slider-value" id="sens-growth-value">5%</span>
+      </div>
+      <input type="range" class="sensitivity-slider" id="sens-growth" min="-5" max="20" step="0.5" value="5"
+             oninput="updateSensitivity()">
+    </div>
+
+    <div class="sensitivity-slider-group">
+      <div class="sensitivity-slider-label">
+        <span>ARPA (Avg Deal Size)</span>
+        <span class="sensitivity-slider-value" id="sens-arpa-value">$50K</span>
+      </div>
+      <input type="range" class="sensitivity-slider" id="sens-arpa" min="5000" max="200000" step="5000" value="50000"
+             oninput="updateSensitivity()">
+    </div>
+
+    <div class="sensitivity-comparison" id="sensitivity-results">
+      <!-- Populated by JS -->
+    </div>
+  </div>
 
   </div><!-- end app-container -->
 
@@ -274,6 +519,10 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
+  <script src="/lib/cross-reference.js"></script>
+  <script src="/lib/waterfall.js"></script>
+  <script src="/lib/efficiency-metrics.js"></script>
   <script>
     const SEGMENT_COLORS = ['purple', 'blue', 'green', 'orange', 'cyan', 'yellow'];
     let segments = [];
@@ -672,6 +921,7 @@
     function calculateAll() {
       segments.forEach(s => calculateSegment(s.id));
       updateRollup();
+      initSensitivity();
     }
     
     function updateRollup() {
@@ -843,6 +1093,174 @@
     }
 
     // ── Export ──
+    // ── Sensitivity Analysis ──
+    let baseMetrics = null;
+
+    function initSensitivity() {
+      if (segments.length === 0) return;
+      const firstSeg = segments[0];
+      const id = firstSeg.id;
+      const get = (field) => parseNum(document.getElementById(`${id}-${field}`).value);
+
+      const churnVal = get('churn');
+      const avgDeal = get('avgDeal');
+
+      // Set slider ranges centered on current values
+      const churnSlider = document.getElementById('sens-churn');
+      churnSlider.min = Math.max(0, churnVal - 5);
+      churnSlider.max = churnVal + 5;
+      churnSlider.value = churnVal;
+
+      const arpaSlider = document.getElementById('sens-arpa');
+      const arpaMin = Math.max(5000, avgDeal * 0.5);
+      const arpaMax = avgDeal * 1.5;
+      arpaSlider.min = arpaMin;
+      arpaSlider.max = arpaMax;
+      arpaSlider.step = Math.max(1000, Math.round(avgDeal * 0.05));
+      arpaSlider.value = avgDeal;
+
+      // Growth rate based on current ARR targets
+      const currentARR = get('currentARR');
+      const eoyARR = get('eoyARR');
+      const today = new Date();
+      const monthsToEOY = 12 - today.getMonth();
+      const monthlyGrowth = ((Math.pow(eoyARR / currentARR, 1 / monthsToEOY) - 1) * 100);
+      const growthSlider = document.getElementById('sens-growth');
+      growthSlider.min = Math.max(-5, monthlyGrowth - 10);
+      growthSlider.max = monthlyGrowth + 10;
+      growthSlider.value = monthlyGrowth.toFixed(1);
+
+      // Calculate base case metrics
+      baseMetrics = runSensitivityModel(churnVal, monthlyGrowth, avgDeal, id);
+
+      document.getElementById('sensitivity-panel').style.display = 'block';
+      updateSensitivity();
+    }
+
+    function runSensitivityModel(churnRate, monthlyGrowthPct, avgDeal, segId) {
+      const get = (field) => parseNum(document.getElementById(`${segId}-${field}`).value);
+      const currentARR = get('currentARR');
+      const winRate = get('winRate') / 100;
+      const nrr = get('nrr') / 100;
+      const quota = get('quota');
+      const repOTE = get('repOTE');
+
+      const monthlyChurn = churnRate / 100 / 12;
+      const monthlyGrowth = monthlyGrowthPct / 100;
+      let arr = currentARR;
+      let totalCustomers = Math.round(currentARR / avgDeal);
+      let totalBookings = 0;
+      let totalChurn = 0;
+      let totalReps = 0;
+
+      for (let i = 0; i < 24; i++) {
+        const targetARR = arr * (1 + monthlyGrowth);
+        const churnARR = arr * monthlyChurn;
+        const expansion = arr * ((nrr - 1 + churnRate / 100) / 12);
+        const requiredNew = Math.max(0, targetARR - arr + churnARR - expansion);
+        const newCust = Math.round(requiredNew / avgDeal);
+        const churnedCust = Math.round(totalCustomers * monthlyChurn);
+
+        totalBookings += requiredNew;
+        totalChurn += churnARR;
+        totalCustomers = totalCustomers + newCust - churnedCust;
+        arr = targetARR;
+
+        const annualBookings = requiredNew * 12;
+        totalReps = Math.max(totalReps, Math.ceil(annualBookings / quota) || 1);
+      }
+
+      return {
+        finalARR: arr,
+        totalCustomers,
+        totalBookings,
+        totalChurn,
+        peakReps: totalReps,
+        laborCost: totalReps * repOTE * 2
+      };
+    }
+
+    function updateSensitivity() {
+      if (segments.length === 0 || !baseMetrics) return;
+      const id = segments[0].id;
+
+      const churn = parseFloat(document.getElementById('sens-churn').value);
+      const growth = parseFloat(document.getElementById('sens-growth').value);
+      const arpa = parseFloat(document.getElementById('sens-arpa').value);
+
+      document.getElementById('sens-churn-value').textContent = churn.toFixed(1) + '%';
+      document.getElementById('sens-growth-value').textContent = growth.toFixed(1) + '%';
+      document.getElementById('sens-arpa-value').textContent = formatCurrency(arpa);
+
+      const adjusted = runSensitivityModel(churn, growth, arpa, id);
+
+      const metrics = [
+        { label: 'Year 2 ARR', base: baseMetrics.finalARR, adj: adjusted.finalARR, fmt: formatCurrency },
+        { label: 'Total Customers', base: baseMetrics.totalCustomers, adj: adjusted.totalCustomers, fmt: v => v.toLocaleString() },
+        { label: 'Total Bookings (24mo)', base: baseMetrics.totalBookings, adj: adjusted.totalBookings, fmt: formatCurrency },
+        { label: 'Total Churn (24mo)', base: baseMetrics.totalChurn, adj: adjusted.totalChurn, fmt: formatCurrency },
+        { label: 'Peak Sales Reps', base: baseMetrics.peakReps, adj: adjusted.peakReps, fmt: v => v.toString() },
+        { label: 'Est. Labor Cost (24mo)', base: baseMetrics.laborCost, adj: adjusted.laborCost, fmt: formatCurrency }
+      ];
+
+      let html = `<table class="sensitivity-table">
+        <thead><tr><th>Metric</th><th>Base Case</th><th>Adjusted</th><th>Delta</th></tr></thead>
+        <tbody>`;
+
+      metrics.forEach(m => {
+        const delta = m.adj - m.base;
+        const deltaPct = m.base !== 0 ? ((delta / m.base) * 100).toFixed(1) : '0.0';
+        const deltaClass = delta > 0 ?
+          (m.label.includes('Churn') || m.label.includes('Labor') ? 'delta-negative' : 'delta-positive') :
+          (m.label.includes('Churn') || m.label.includes('Labor') ? 'delta-positive' : 'delta-negative');
+        const sign = delta >= 0 ? '+' : '';
+        html += `<tr>
+          <td>${m.label}</td>
+          <td>${m.fmt(m.base)}</td>
+          <td>${m.fmt(m.adj)}</td>
+          <td class="${delta !== 0 ? deltaClass : ''}">${sign}${deltaPct}%</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('sensitivity-results').innerHTML = html;
+    }
+
+    function exportGrowthCSV() {
+      // Export the rollup table data
+      const rows = [];
+      segments.forEach(seg => {
+        const data = segmentResults[seg.id];
+        if (!data) return;
+        data.results.forEach(r => {
+          rows.push({
+            segment: seg.name,
+            month: r.month,
+            arr: r.arr.toFixed(0),
+            mrr: r.mrr.toFixed(0),
+            bookings: r.bookings.toFixed(0),
+            pipeline: r.pipeline.toFixed(0),
+            opps: r.opps,
+            churn: r.churn.toFixed(0),
+            new_customers: r.newCustomers,
+            total_customers: r.totalCustomers,
+            reps: r.reps,
+            csms: r.csms,
+            managers: r.mgrs,
+            labor_cost: r.laborCost.toFixed(0),
+            gross_profit: r.grossProfit.toFixed(0),
+            gross_margin_pct: r.grossMarginPct.toFixed(1),
+            net_profit: r.netProfit.toFixed(0)
+          });
+        });
+      });
+      if (rows.length === 0) {
+        alert('Generate a plan first to export CSV');
+        return;
+      }
+      exportCSV(rows, 'saas-growth-model.csv');
+    }
+
     function exportToolJSON() {
       const data = {
         name: 'SaaS Growth Model',
@@ -928,10 +1346,188 @@
       } catch (e) { console.warn('Load failed:', e); }
     }
 
-    // Wrap calculateAll to auto-save
+    // ── ARR Waterfall Chart (MGT-E2) ──
+    function renderWaterfall() {
+      if (segments.length === 0 || Object.keys(segmentResults).length === 0) {
+        document.getElementById('waterfall-section').style.display = 'none';
+        return;
+      }
+      document.getElementById('waterfall-section').style.display = '';
+
+      // Build segments with values for the waterfall module
+      const segsWithValues = segments.map(s => {
+        const values = {};
+        INPUT_FIELDS.forEach(f => {
+          const el = document.getElementById(`${s.id}-${f}`);
+          if (el) values[f] = el.value;
+        });
+        return { ...s, values };
+      });
+
+      const wf = WaterfallChart.buildWaterfallData(segsWithValues, segmentResults);
+      const container = document.getElementById('waterfall-chart');
+
+      // SVG dimensions
+      const svgW = 660, svgH = 280;
+      const barW = 80, gap = 48;
+      const startX = 50;
+      const topPad = 40, bottomPad = 50;
+      const chartH = svgH - topPad - bottomPad;
+
+      // Find max value for scaling
+      const allValues = [wf.startingARR, wf.startingARR + wf.newBusiness,
+        wf.startingARR + wf.newBusiness + Math.max(0, wf.expansion), wf.endingARR];
+      const maxVal = Math.max(...allValues, 1);
+      const scale = (v) => (v / maxVal) * chartH;
+
+      // Compute bar positions (waterfall logic)
+      let runningTop = svgH - bottomPad - scale(wf.startingARR);
+      const bars = [];
+
+      // Starting ARR
+      bars.push({ x: startX, y: runningTop, h: scale(wf.startingARR), val: wf.startingARR, label: 'Starting ARR', color: '#58a6ff', type: 'total' });
+
+      // New Business (stacks up from starting ARR)
+      const nbH = scale(Math.abs(wf.newBusiness));
+      const nbTop = runningTop - nbH;
+      bars.push({ x: startX + barW + gap, y: nbTop, h: nbH, val: wf.newBusiness, label: 'New Business', color: '#3fb950', type: 'positive' });
+      runningTop = nbTop;
+
+      // Expansion
+      const expH = scale(Math.abs(wf.expansion));
+      const expVal = wf.expansion;
+      if (expVal >= 0) {
+        bars.push({ x: startX + 2*(barW + gap), y: runningTop - expH, h: expH, val: expVal, label: 'Expansion', color: '#3fb950', type: 'positive' });
+        runningTop = runningTop - expH;
+      } else {
+        bars.push({ x: startX + 2*(barW + gap), y: runningTop, h: expH, val: expVal, label: 'Expansion', color: '#f85149', type: 'negative' });
+        runningTop = runningTop + expH;
+      }
+
+      // Churn (drops down)
+      const churnH = scale(Math.abs(wf.churn));
+      bars.push({ x: startX + 3*(barW + gap), y: runningTop, h: churnH, val: wf.churn, label: 'Churn', color: '#f85149', type: 'negative' });
+      runningTop = runningTop + churnH;
+
+      // Ending ARR
+      const endH = scale(wf.endingARR);
+      const endTop = svgH - bottomPad - endH;
+      bars.push({ x: startX + 4*(barW + gap), y: endTop, h: endH, val: wf.endingARR, label: 'Ending ARR', color: '#58a6ff', type: 'total' });
+
+      let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" class="waterfall-svg" xmlns="http://www.w3.org/2000/svg">`;
+      // Baseline
+      svg += `<line x1="0" y1="${svgH - bottomPad}" x2="${svgW}" y2="${svgH - bottomPad}" stroke="#30363d" stroke-width="1"/>`;
+
+      // Connector lines between bars
+      for (let i = 0; i < bars.length - 1; i++) {
+        const b = bars[i];
+        const next = bars[i + 1];
+        const connY = b.type === 'negative' ? b.y + b.h : b.y;
+        svg += `<line x1="${b.x + barW}" y1="${connY}" x2="${next.x}" y2="${connY}" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>`;
+      }
+
+      // Bars
+      bars.forEach(b => {
+        svg += `<rect x="${b.x}" y="${b.y}" width="${barW}" height="${Math.max(b.h, 2)}" fill="${b.color}" rx="4"/>`;
+        // Value label
+        const valLabel = formatCurrency(b.val);
+        const labelY = b.val >= 0 ? b.y - 6 : b.y + b.h + 14;
+        svg += `<text x="${b.x + barW/2}" y="${labelY}" text-anchor="middle" font-size="12" font-weight="600" fill="#c9d1d9">${valLabel}</text>`;
+        // Category label
+        svg += `<text x="${b.x + barW/2}" y="${svgH - bottomPad + 18}" text-anchor="middle" font-size="10" fill="#8b949e">${b.label}</text>`;
+      });
+
+      svg += '</svg>';
+      container.innerHTML = svg;
+    }
+
+    // ── Efficiency Metrics (MGT-E3) ──
+    function updateEfficiencyMetrics() {
+      if (segments.length === 0 || Object.keys(segmentResults).length === 0) {
+        document.getElementById('efficiency-section').style.display = 'none';
+        return;
+      }
+      document.getElementById('efficiency-section').style.display = '';
+
+      // Gather inputs
+      const grossMarginPct = parseNum(document.getElementById('eff-grossMargin').value);
+      const smSpend = parseNum(document.getElementById('eff-smSpend').value);
+      const revenueGrowthRate = parseNum(document.getElementById('eff-growthRate').value);
+      const profitMargin = parseNum(document.getElementById('eff-profitMargin').value);
+
+      // Compute from model data
+      let totalCurrentARR = 0, totalYear2ARR = 0, totalNewCustomers = 0, totalAvgDeal = 0;
+      let segCount = 0;
+      segments.forEach(seg => {
+        const data = segmentResults[seg.id];
+        if (!data) return;
+        const el = document.getElementById(`${seg.id}-currentARR`);
+        const dealEl = document.getElementById(`${seg.id}-avgDeal`);
+        totalCurrentARR += el ? parseNum(el.value) : 0;
+        totalYear2ARR += data.lastMonth.arr;
+        totalNewCustomers += data.y1Totals.newCust + data.y2Totals.newCust;
+        totalAvgDeal += dealEl ? parseNum(dealEl.value) : 0;
+        segCount++;
+      });
+      const arpa = segCount > 0 ? totalAvgDeal / segCount : 0;
+
+      const metrics = EfficiencyMetrics.computeEfficiencyMetrics({
+        smSpend: smSpend,
+        newCustomersAcquired: totalNewCustomers,
+        arpa: arpa,
+        grossMarginPct: grossMarginPct,
+        currentARR: totalYear2ARR,
+        previousARR: totalCurrentARR,
+        previousSmSpend: smSpend,
+        revenueGrowthRate: revenueGrowthRate,
+        profitMargin: profitMargin,
+      });
+
+      const ratingClass = (r) => r ? `rating-${r}` : '';
+
+      document.getElementById('efficiency-metrics').innerHTML = `
+        <div class="efficiency-card">
+          <div class="efficiency-card-value ${ratingClass(metrics.cacRating)}">${metrics.cac !== null ? formatCurrency(metrics.cac) : '--'}</div>
+          <div class="efficiency-card-label">CAC</div>
+          <div class="efficiency-card-hint">S&M Spend / New Customers</div>
+        </div>
+        <div class="efficiency-card">
+          <div class="efficiency-card-value ${ratingClass(metrics.paybackRating)}">${metrics.paybackPeriodMonths !== null ? metrics.paybackPeriodMonths + ' mo' : '--'}</div>
+          <div class="efficiency-card-label">Payback Period</div>
+          <div class="efficiency-card-hint">CAC / (ARPA x GM%)</div>
+        </div>
+        <div class="efficiency-card">
+          <div class="efficiency-card-value ${metrics.ruleOf40Pass ? 'rating-good' : 'rating-poor'}">${metrics.ruleOf40}%</div>
+          <div class="efficiency-card-label">Rule of 40</div>
+          <div class="efficiency-card-hint">Growth% + Profit% (target: 40+)</div>
+        </div>
+        <div class="efficiency-card">
+          <div class="efficiency-card-value ${ratingClass(metrics.magicNumberRating)}">${metrics.magicNumber !== null ? metrics.magicNumber.toFixed(2) + 'x' : '--'}</div>
+          <div class="efficiency-card-label">Magic Number</div>
+          <div class="efficiency-card-hint">Net New ARR / Prev S&M (target: 1.0+)</div>
+        </div>
+      `;
+    }
+
+    // Wire efficiency input changes
+    ['eff-grossMargin', 'eff-smSpend', 'eff-growthRate', 'eff-profitMargin'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateEfficiencyMetrics);
+    });
+
+    // ── Cross-Reference (MGT-E1) ──
+    async function loadCrossReference() {
+      try {
+        const data = await CrossReference.fetch();
+        if (data) CrossReference.renderBanner('cross-ref-container', 'growth-model');
+      } catch (e) { console.warn('Cross-ref load failed:', e); }
+    }
+
+    // Wrap calculateAll to auto-save + update waterfall + efficiency
     const _origCalculateAll = calculateAll;
     calculateAll = function() {
       _origCalculateAll();
+      renderWaterfall();
+      updateEfficiencyMetrics();
       saveToStorage();
     };
 
@@ -939,6 +1535,7 @@
     AuthUI.onLogin(async () => {
       await loadFromStorage();
       checkEmptyState();
+      loadCrossReference();
     });
     AuthUI.init();
   </script>

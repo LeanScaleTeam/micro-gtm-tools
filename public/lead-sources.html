@@ -391,6 +391,7 @@
     <div class="header-actions">
       <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
       <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportSourcesCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -553,6 +554,7 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
   <script>
     // Default channels with icons and colors
     const CHANNELS = {
@@ -917,6 +919,16 @@
       a.download = 'lead-source-taxonomy.json';
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function exportSourcesCSV() {
+      const rows = sources.map(s => ({
+        name: s.name,
+        channel: s.channel,
+        entry_method: s.entry,
+        description: s.description || ''
+      }));
+      exportCSV(rows, 'lead-source-taxonomy.csv');
     }
 
     function exportPDF() {

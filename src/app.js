@@ -4,6 +4,7 @@ const path = require('path');
 const { supabaseAdmin } = require('../lib/supabase-client');
 const { requireAuth } = require('../lib/auth-middleware');
 const { logActivity } = require('../lib/activity-logger');
+const { computeCrossReference } = require('./cross-reference');
 
 const app = express();
 app.use(cors({
@@ -116,6 +117,22 @@ app.put('/api/tools/:tool/state', async (req, res) => {
     await setSection(configId, `tool:${req.params.tool}`, req.body);
     logActivity({ tenantId: req.tenantId, userId: req.user.id, app: 'gtm-tools', action: 'save_tool_state', metadata: { tool: req.params.tool } });
     res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Cross-Reference endpoint ──────────────────────────────
+app.get('/api/tools/cross-reference', async (req, res) => {
+  try {
+    const configId = await getActiveConfig(req);
+    const [growthState, capacityState, marketingState] = await Promise.all([
+      getSection(configId, 'tool:saas-growth-model'),
+      getSection(configId, 'tool:sales-capacity'),
+      getSection(configId, 'tool:marketing-plan'),
+    ]);
+    const result = computeCrossReference(growthState, capacityState, marketingState);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

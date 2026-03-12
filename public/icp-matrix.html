@@ -282,6 +282,7 @@
     <div class="header-actions">
       <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
       <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportICPCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -402,6 +403,7 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
 
   <script>
     // Default tiers (shared across all segments)
@@ -677,6 +679,21 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'icp-persona-matrix.json'; a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function exportICPCSV() {
+      const seg = data.segments.find(s => s.id === data.currentSegmentId);
+      if (!seg) return;
+      const matrix = currentMatrix === 'icp' ? seg.icp : seg.persona;
+      const rows = [];
+      matrix.dimensions.forEach(dim => {
+        const row = { segment: seg.name, matrix_type: currentMatrix.toUpperCase(), dimension: dim.name, weight: dim.weight };
+        data.tiers.forEach(tier => {
+          row[tier.label + ' (' + tier.name + ')'] = matrix.cells[tier.id + '_' + dim.id] || '';
+        });
+        rows.push(row);
+      });
+      exportCSV(rows, 'icp-persona-matrix.csv');
     }
 
     function exportPDF() { window.print(); }

@@ -150,6 +150,21 @@
     }
 
     .modal { width: 500px; }
+
+    /* Cross-Reference Banner */
+    .cross-ref-banner {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .cross-ref-title { font-size: 11px; font-weight: 600; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .cross-ref-items { display: flex; gap: 24px; flex-wrap: wrap; }
+    .cross-ref-item { display: flex; flex-direction: column; gap: 2px; }
+    .cross-ref-label { font-size: 11px; color: var(--text-secondary); }
+    .cross-ref-value { font-size: 14px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -175,6 +190,7 @@
     <div class="header-actions">
       <button class="btn" onclick="calculate()">📊 Calculate</button>
       <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportMarketingCSV()">📥 Export CSV</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -196,6 +212,8 @@
   </div>
 
   <div id="main-content">
+  <!-- Cross-Reference Banner (MGT-E1) -->
+  <div id="cross-ref-container"></div>
   <div class="layout">
     <!-- Left Panel -->
     <div>
@@ -362,6 +380,8 @@
   <script src="/lib/env.js"></script>
   <script src="/lib/auth-client.js"></script>
   <script src="/lib/nav.js"></script>
+  <script src="/lib/export-utils.js"></script>
+  <script src="/lib/cross-reference.js"></script>
   <script>
     let channels = [];
     const CHANNEL_COLORS = ['blue', 'green', 'purple', 'orange', 'cyan', 'pink', 'yellow', 'red'];
@@ -655,6 +675,21 @@
       window.print();
     }
 
+    function exportMarketingCSV() {
+      const quarters = getQuarters();
+      const rows = channels.map(ch => {
+        const row = { channel: ch.name, pipeline_per_dollar: ch.ratio };
+        quarters.forEach((q, i) => {
+          row['budget_' + q.label] = ch.budgets[i] || 0;
+        });
+        const totalBudget = (ch.budgets || []).reduce((s, v) => s + v, 0);
+        row.total_budget = totalBudget;
+        row.total_pipeline = totalBudget * ch.ratio;
+        return row;
+      });
+      exportCSV(rows, 'marketing-channel-plan.csv');
+    }
+
     function exportToolJSON() {
       const data = {
         name: 'Marketing Channel Planner',
@@ -745,10 +780,19 @@
       } catch (e) { console.warn('Load failed:', e); return false; }
     }
 
+    // ── Cross-Reference (MGT-E1) ──
+    async function loadCrossReference() {
+      try {
+        const data = await CrossReference.fetch();
+        if (data) CrossReference.renderBanner('cross-ref-container', 'marketing-plan');
+      } catch (e) { console.warn('Cross-ref load failed:', e); }
+    }
+
     // Auth wiring
     AuthUI.onLogin(async () => {
       await loadFromStorage();
       checkEmptyState();
+      loadCrossReference();
     });
     AuthUI.init();
   </script>
