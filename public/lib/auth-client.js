@@ -25,42 +25,47 @@ const AuthUI = {
   _onLoginCallbacks: [],
 
   async init() {
-    // Check for hub token passthrough (?token=xxx)
+    // Check for hub token passthrough (?token=xxx&refresh_token=xxx)
     const params = new URLSearchParams(window.location.search);
     const hubToken = params.get('token');
+    const hubRefreshToken = params.get('refresh_token');
     if (hubToken) {
-      // Strip token from URL for security
+      // Strip tokens from URL for security
       params.delete('token');
+      params.delete('refresh_token');
       const newUrl = params.toString()
         ? `${window.location.pathname}?${params.toString()}`
         : window.location.pathname;
       window.history.replaceState({}, '', newUrl);
 
-      // Set session using the hub token
+      // Set session using the hub token (use real refresh_token if provided)
       const { data: { session }, error } = await supabaseClient.auth.setSession({
         access_token: hubToken,
-        refresh_token: hubToken,
+        refresh_token: hubRefreshToken || hubToken,
       });
       if (session && !error) {
         this._handleLogin(session);
-        this._wireForm();
-        return;
+      } else {
+        // If token was invalid, fall through to normal login
+        this._showLogin();
       }
-      // If token was invalid, fall through to normal login
-    }
-
-    // Check for existing session
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
-      this._handleLogin(session);
     } else {
-      this._showLogin();
+      // Check for existing session
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        this._handleLogin(session);
+      } else {
+        this._showLogin();
+      }
     }
 
-    // Listen for auth state changes (handles magic link returns, etc.)
+    // Listen for auth state changes (handles magic link returns, token refresh, etc.)
     supabaseClient.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         this._handleLogin(session);
+      }
+      if (event === 'TOKEN_REFRESHED' && session) {
+        window.__AUTH_TOKEN__ = session.access_token;
       }
       if (event === 'SIGNED_OUT') {
         this._showLogin();

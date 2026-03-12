@@ -6,7 +6,20 @@ const { requireAuth } = require('../lib/auth-middleware');
 const { logActivity } = require('../lib/activity-logger');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://lsapps.netlify.app',
+    'https://lsfieldmapping.netlify.app',
+    'https://inboundflow.netlify.app',
+    'https://territorydesigner.netlify.app',
+    'https://gtmtracker.netlify.app',
+    'https://lsdossiers.netlify.app',
+    'https://microgtmtools.netlify.app',
+    'https://lsmissioncontrol.netlify.app',
+    /localhost:\d+$/,
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');

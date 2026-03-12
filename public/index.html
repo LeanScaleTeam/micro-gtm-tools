@@ -76,6 +76,25 @@
       font-size: 14px;
       color: var(--text-secondary);
     }
+
+    /* ── Toast Notifications ───────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      z-index: 10000;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.75rem 1.25rem;
+      font-size: 0.85rem; max-width: 360px;
+      pointer-events: auto;
+      animation: toast-in 0.3s ease forwards;
+    }
+    .toast-success { border-color: rgba(63,185,80,0.4); color: #86efac; }
+    .toast-error { border-color: rgba(248,81,73,0.4); color: #fca5a5; }
+    .toast-info { border-color: rgba(88,166,255,0.4); color: #93c5fd; }
+    @keyframes toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
 </head>
 <body>
@@ -159,6 +178,24 @@
   <script>
     AuthUI.onLogin(() => {});
     AuthUI.init();
+  </script>
+
+  <div id="toast-container"></div>
+  <script>
+    window.Toast = {
+      show(message, type, duration) {
+        duration = duration || 3000;
+        type = type || 'info';
+        const t = document.createElement('div');
+        t.className = 'toast toast-' + type;
+        t.textContent = message;
+        document.getElementById('toast-container').appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, duration);
+      },
+      success(msg) { this.show(msg, 'success', 3000); },
+      error(msg) { this.show(msg, 'error', 5000); },
+      info(msg) { this.show(msg, 'info', 3000); }
+    };
   </script>
 </body>
 </html>
