@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GTM Lifecycle Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    .layout { grid-template-columns: 380px 1fr; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+    .btn-danger { background: var(--accent-red); }
+    .btn-danger:hover { background: #e04440; }
+
+    select.input-field { cursor: pointer; }
+
+    /* Stage List */
+    .stage-list {
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+    
+    .stage-item {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--accent-blue);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .stage-item:hover {
+      background: #232a3b;
+    }
+    
+    .stage-item.active {
+      border-left-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+    }
+    
+    .stage-item.dragging {
+      opacity: 0.5;
+    }
+    
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .stage-name {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stage-number {
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .stage-meta {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    .stage-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .stage-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .stage-action-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 14px;
+      opacity: 0.6;
+    }
+    
+    .stage-action-btn:hover {
+      opacity: 1;
+      background: var(--bg-input);
+    }
+    
+    .stage-action-btn.delete:hover {
+      color: var(--accent-red);
+    }
+    
+    .drag-handle {
+      cursor: grab;
+      color: var(--text-secondary);
+      opacity: 0.4;
+    }
+    
+    .drag-handle:hover {
+      opacity: 1;
+    }
+    
+    /* Visual Flow */
+    .flow-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      min-height: 80px;
+    }
+    
+    .flow-stage {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    
+    .flow-stage .owner-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .flow-stage.owner-marketing { border-color: var(--accent-purple); }
+    .flow-stage.owner-marketing .owner-badge { background: var(--accent-purple); }
+    
+    .flow-stage.owner-sales { border-color: var(--accent-blue); }
+    .flow-stage.owner-sales .owner-badge { background: var(--accent-blue); }
+    
+    .flow-stage.owner-cs { border-color: var(--accent-green); }
+    .flow-stage.owner-cs .owner-badge { background: var(--accent-green); }
+    
+    .flow-stage.owner-ops { border-color: var(--accent-orange); }
+    .flow-stage.owner-ops .owner-badge { background: var(--accent-orange); }
+    
+    .flow-arrow {
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+    
+    /* Detail Panel */
+    .detail-panel {
+      position: sticky;
+      top: 24px;
+    }
+    
+    .detail-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .detail-empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    /* Owner colors in detail */
+    .owner-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .owner-indicator.marketing { background: rgba(163, 113, 247, 0.2); color: var(--accent-purple); }
+    .owner-indicator.sales { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+    .owner-indicator.cs { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+    .owner-indicator.ops { background: rgba(240, 136, 62, 0.2); color: var(--accent-orange); }
+    
+    /* Object badge */
+    .object-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: var(--bg-input);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    /* Summary table */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 12px;
+    }
+    
+    .summary-table th {
+      text-align: left;
+      padding: 10px 8px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .summary-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    
+    .summary-table tr:hover td {
+      background: var(--bg-secondary);
+    }
+    
+    .criteria-text {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    /* Print overrides */
+    @media print {
+      .stage-actions { display: none !important; }
+      .layout { display: block; }
+      .layout > div:first-child { display: none; }
+      .flow-container { background: #f5f5f5; }
+      .flow-stage { background: white; }
+      .summary-table th { background: #f5f5f5; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>GTM Lifecycle</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>🔄 GTM Lifecycle Builder</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
+      <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left: Stage List -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Lifecycle Stages</span>
+          <button class="btn btn-sm btn-green" onclick="openAddModal()">+ Add Stage</button>
+        </div>
+        <div class="stage-list" id="stage-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Detail & Flow -->
+    <div class="detail-panel">
+      <!-- Visual Flow -->
+      <div class="card">
+        <div class="card-title">🎯 Lifecycle Flow</div>
+        <div class="flow-container" id="flow-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Stage Detail / Summary -->
+      <div class="card">
+        <div class="card-title" id="detail-title">📊 Full Lifecycle Summary</div>
+        <div id="detail-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Stage Modal -->
+  <div class="modal-overlay" id="stage-modal">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">➕ Add Stage</div>
+      
+      <div class="input-group">
+        <label class="input-label">Stage Name</label>
+        <input type="text" class="input-field" id="stage-name" placeholder="e.g., MQL, SQL, Discovery">
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Object</label>
+        <select class="input-field" id="stage-object">
+          <option value="Lead">Lead</option>
+          <option value="Contact">Contact</option>
+          <option value="Account">Account</option>
+          <option value="Opportunity">Opportunity</option>
+          <option value="Custom">Custom Object</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Owner</label>
+        <select class="input-field" id="stage-owner">
+          <option value="Marketing">Marketing</option>
+          <option value="Sales">Sales</option>
+          <option value="Customer Success">Customer Success</option>
+          <option value="Operations">Operations</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Entry Criteria</label>
+        <textarea class="input-field" id="stage-entry" placeholder="What conditions must be met to enter this stage?"></textarea>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Exit Criteria</label>
+        <textarea class="input-field" id="stage-exit" placeholder="What conditions must be met to exit this stage?"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-green" id="modal-save-btn" onclick="saveStage()">Add Stage</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /#app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    // Default stages
+    const DEFAULT_STAGES = [
+      {
+        id: 's1',
+        name: 'MQL',
+        object: 'Lead',
+        owner: 'Marketing',
+        entry: 'Lead score reaches threshold (e.g., 50+ points)\nEngaged with high-intent content\nFits ICP criteria',
+        exit: 'Sales accepts the lead\nDisqualified (bad fit, unresponsive)'
+      },
+      {
+        id: 's2',
+        name: 'SAL',
+        object: 'Lead',
+        owner: 'Sales',
+        entry: 'MQL accepted by sales rep\nInitial outreach attempted',
+        exit: 'Qualified via discovery call → SQL\nDisqualified (timing, budget, fit)'
+      },
+      {
+        id: 's3',
+        name: 'SQL',
+        object: 'Opportunity',
+        owner: 'Sales',
+        entry: 'BANT/MEDDIC criteria confirmed\nBudget, timeline, decision-maker identified\nOpportunity created in CRM',
+        exit: 'Discovery meeting scheduled\nDeal disqualified'
+      },
+      {
+        id: 's4',
+        name: 'Discovery',
+        object: 'Opportunity',
+        owner: 'Sales',
+        entry: 'Discovery call scheduled\nKey stakeholders identified',
+        exit: 'Pain points documented\nUse case validated\nDemo requested'
+      },
+      {
+        id: 's5',
+        name: 'Demo Completed',
+        object: 'Opportunity',
+        owner: 'Sales',
+        entry: 'Product demo delivered\nTechnical requirements discussed',
+        exit: 'Positive feedback, proposal requested\nNo fit identified'
+      },
+      {
+        id: 's6',
+        name: 'Proposal Sent',
+        object: 'Opportunity',
+        owner: 'Sales',
+        entry: 'Pricing/proposal document sent\nTerms outlined',
+        exit: 'Verbal agreement received\nNegotiations ongoing\nDeal lost'
+      },
+      {
+        id: 's7',
+        name: 'Verbal',
+        object: 'Opportunity',
+        owner: 'Sales',
+        entry: 'Verbal commitment from buyer\nPending contract/signature',
+        exit: 'Contract submitted for admin review\nDeal falls through'
+      },
+      {
+        id: 's7b',
+        name: 'Admin Review',
+        object: 'Opportunity',
+        owner: 'Operations',
+        entry: 'Contract submitted for review\nDeal terms finalized\nPricing approved by sales leadership',
+        exit: 'Contract validated and countersigned\nBilling/invoicing details confirmed\nCRM record verified'
+      },
+      {
+        id: 's8',
+        name: 'Closed Won',
+        object: 'Opportunity',
+        owner: 'Customer Success',
+        entry: 'Contract signed\nPayment received or invoiced',
+        exit: 'Handoff to Customer Success complete\nOnboarding kickoff scheduled'
+      },
+      {
+        id: 's9',
+        name: 'Onboarding',
+        object: 'Account',
+        owner: 'Customer Success',
+        entry: 'Kickoff call completed\nImplementation plan defined\nKey stakeholders identified',
+        exit: 'Platform/product configured\nUsers trained\nGo-live achieved'
+      },
+      {
+        id: 's10',
+        name: 'Early Adoption',
+        object: 'Account',
+        owner: 'Customer Success',
+        entry: 'Go-live complete\nUsers actively engaging with product\nFirst 30-90 days post-launch',
+        exit: 'Initial success metrics achieved\nKey workflows adopted\nExpansion conversations initiated'
+      },
+      {
+        id: 's11',
+        name: 'Mature Adoption',
+        object: 'Account',
+        owner: 'Customer Success',
+        entry: 'Core use cases fully deployed\nROI demonstrated\nExecutive sponsor engaged',
+        exit: 'Renewal secured\nExpansion/upsell closed\nCustomer becomes advocate/reference'
+      }
+    ];
+
+    function getDefaultStages() {
+      return JSON.parse(JSON.stringify(DEFAULT_STAGES));
+    }
+
+    let stages = getDefaultStages();
+    let selectedStageId = null;
+    let editingStageId = null;
+    let draggedItem = null;
+
+    function getOwnerClass(owner) {
+      if (owner.toLowerCase().includes('marketing')) return 'marketing';
+      if (owner.toLowerCase().includes('sales')) return 'sales';
+      if (owner.toLowerCase().includes('success')) return 'cs';
+      return 'ops';
+    }
+
+    function renderStageList() {
+      const container = document.getElementById('stage-list');
+      
+      if (stages.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No stages defined. Click "+ Add Stage" to begin.</div>';
+        return;
+      }
+      
+      container.innerHTML = stages.map((stage, idx) => `
+        <div class="stage-item ${selectedStageId === stage.id ? 'active' : ''}" 
+             data-id="${stage.id}"
+             draggable="true"
+             onclick="selectStage('${stage.id}')"
+             ondragstart="handleDragStart(event)"
+             ondragover="handleDragOver(event)"
+             ondrop="handleDrop(event)"
+             ondragend="handleDragEnd(event)">
+          <div class="stage-header">
+            <span class="stage-name">
+              <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+              <span class="stage-number">${idx + 1}</span>
+              ${stage.name}
+            </span>
+            <div class="stage-actions">
+              <button class="stage-action-btn" onclick="event.stopPropagation(); editStage('${stage.id}')" title="Edit">✎</button>
+              <button class="stage-action-btn delete" onclick="event.stopPropagation(); deleteStage('${stage.id}')" title="Delete">✕</button>
+            </div>
+          </div>
+          <div class="stage-meta">
+            <span>📦 ${stage.object}</span>
+            <span class="owner-indicator ${getOwnerClass(stage.owner)}">👤 ${stage.owner}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderFlow() {
+      const container = document.getElementById('flow-container');
+      
+      if (stages.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">Add stages to see the lifecycle flow</div>';
+        return;
+      }
+      
+      container.innerHTML = stages.map((stage, idx) => {
+        const ownerClass = getOwnerClass(stage.owner);
+        return `
+          <div class="flow-stage owner-${ownerClass}">
+            ${stage.name}
+            <span class="owner-badge">${stage.owner.split(' ')[0]}</span>
+          </div>
+          ${idx < stages.length - 1 ? '<span class="flow-arrow">→</span>' : ''}
+        `;
+      }).join('');
+    }
+
+    function renderDetail() {
+      const container = document.getElementById('detail-content');
+      const title = document.getElementById('detail-title');
+      
+      if (selectedStageId) {
+        const stage = stages.find(s => s.id === selectedStageId);
+        if (!stage) {
+          selectedStageId = null;
+          renderDetail();
+          return;
+        }
+        
+        title.textContent = `📋 ${stage.name} Details`;
+        container.innerHTML = `
+          <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <span class="object-badge">📦 ${stage.object}</span>
+            <span class="owner-indicator ${getOwnerClass(stage.owner)}">👤 ${stage.owner}</span>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label">✅ Entry Criteria</label>
+            <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;font-size:13px;line-height:1.6;white-space:pre-wrap;">${stage.entry || 'Not defined'}</div>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label">🚪 Exit Criteria</label>
+            <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;font-size:13px;line-height:1.6;white-space:pre-wrap;">${stage.exit || 'Not defined'}</div>
+          </div>
+          
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn btn-sm btn-outline" onclick="editStage('${stage.id}')">✎ Edit Stage</button>
+            <button class="btn btn-sm" onclick="selectedStageId=null;renderAll();">← Back to Summary</button>
+          </div>
+        `;
+      } else {
+        title.textContent = '📊 Full Lifecycle Summary';
+        
+        if (stages.length === 0) {
+          container.innerHTML = `
+            <div class="detail-empty">
+              <div class="detail-empty-icon">🔄</div>
+              <div>No stages defined yet</div>
+              <div style="font-size:12px;margin-top:8px;">Add stages to build your GTM lifecycle</div>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = `
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th style="width:30px;">#</th>
+                <th>Stage</th>
+                <th>Object</th>
+                <th>Owner</th>
+                <th>Entry Criteria</th>
+                <th>Exit Criteria</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stages.map((stage, idx) => `
+                <tr onclick="selectStage('${stage.id}')" style="cursor:pointer;">
+                  <td style="text-align:center;color:var(--text-secondary);">${idx + 1}</td>
+                  <td style="font-weight:600;">${stage.name}</td>
+                  <td><span class="object-badge" style="font-size:10px;padding:2px 6px;">${stage.object}</span></td>
+                  <td><span class="owner-indicator ${getOwnerClass(stage.owner)}" style="font-size:10px;padding:2px 6px;">${stage.owner}</span></td>
+                  <td class="criteria-text">${(stage.entry || '-').split('\n')[0]}${stage.entry && stage.entry.split('\n').length > 1 ? '...' : ''}</td>
+                  <td class="criteria-text">${(stage.exit || '-').split('\n')[0]}${stage.exit && stage.exit.split('\n').length > 1 ? '...' : ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top:12px;font-size:11px;color:var(--text-secondary);">Click any row to see full details</div>
+        `;
+      }
+    }
+
+    function renderAll() {
+      renderStageList();
+      renderFlow();
+      renderDetail();
+    }
+
+    function selectStage(id) {
+      selectedStageId = selectedStageId === id ? null : id;
+      renderAll();
+    }
+
+    function openAddModal() {
+      editingStageId = null;
+      document.getElementById('modal-title').textContent = '➕ Add Stage';
+      document.getElementById('modal-save-btn').textContent = 'Add Stage';
+      document.getElementById('stage-name').value = '';
+      document.getElementById('stage-object').value = 'Lead';
+      document.getElementById('stage-owner').value = 'Sales';
+      document.getElementById('stage-entry').value = '';
+      document.getElementById('stage-exit').value = '';
+      document.getElementById('stage-modal').classList.add('active');
+      document.getElementById('stage-name').focus();
+    }
+
+    function editStage(id) {
+      const stage = stages.find(s => s.id === id);
+      if (!stage) return;
+      
+      editingStageId = id;
+      document.getElementById('modal-title').textContent = '✎ Edit Stage';
+      document.getElementById('modal-save-btn').textContent = 'Save Changes';
+      document.getElementById('stage-name').value = stage.name;
+      document.getElementById('stage-object').value = stage.object;
+      document.getElementById('stage-owner').value = stage.owner;
+      document.getElementById('stage-entry').value = stage.entry;
+      document.getElementById('stage-exit').value = stage.exit;
+      document.getElementById('stage-modal').classList.add('active');
+      document.getElementById('stage-name').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('stage-modal').classList.remove('active');
+      editingStageId = null;
+    }
+
+    function saveStage() {
+      const name = document.getElementById('stage-name').value.trim();
+      const object = document.getElementById('stage-object').value;
+      const owner = document.getElementById('stage-owner').value;
+      const entry = document.getElementById('stage-entry').value.trim();
+      const exit = document.getElementById('stage-exit').value.trim();
+      
+      if (!name) {
+        alert('Please enter a stage name');
+        return;
+      }
+      
+      if (editingStageId) {
+        const stage = stages.find(s => s.id === editingStageId);
+        if (stage) {
+          stage.name = name;
+          stage.object = object;
+          stage.owner = owner;
+          stage.entry = entry;
+          stage.exit = exit;
+        }
+      } else {
+        stages.push({
+          id: 's_' + Date.now(),
+          name,
+          object,
+          owner,
+          entry,
+          exit
+        });
+      }
+      
+      closeModal();
+      renderAll();
+      saveToStorage();
+    }
+
+    function deleteStage(id) {
+      if (!confirm('Delete this stage?')) return;
+      stages = stages.filter(s => s.id !== id);
+      if (selectedStageId === id) selectedStageId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    function resetToDefaults() {
+      if (!confirm('Reset to default stages? This will replace all current stages.')) return;
+      stages = getDefaultStages();
+      selectedStageId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    // Drag and drop
+    function handleDragStart(e) {
+      draggedItem = e.target.closest('.stage-item');
+      draggedItem.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      const target = e.target.closest('.stage-item');
+      if (target && target !== draggedItem) {
+        const rect = target.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          target.style.borderTop = '2px solid var(--accent-green)';
+          target.style.borderBottom = '';
+        } else {
+          target.style.borderBottom = '2px solid var(--accent-green)';
+          target.style.borderTop = '';
+        }
+      }
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const target = e.target.closest('.stage-item');
+      if (!target || target === draggedItem) return;
+      
+      const draggedId = draggedItem.dataset.id;
+      const targetId = target.dataset.id;
+      
+      const draggedIdx = stages.findIndex(s => s.id === draggedId);
+      const targetIdx = stages.findIndex(s => s.id === targetId);
+      
+      const [removed] = stages.splice(draggedIdx, 1);
+      
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const insertIdx = e.clientY < midY ? targetIdx : targetIdx + 1;
+      
+      stages.splice(insertIdx > draggedIdx ? insertIdx - 1 : insertIdx, 0, removed);
+      
+      renderAll();
+      saveToStorage();
+    }
+
+    function handleDragEnd(e) {
+      document.querySelectorAll('.stage-item').forEach(item => {
+        item.classList.remove('dragging');
+        item.style.borderTop = '';
+        item.style.borderBottom = '';
+      });
+      draggedItem = null;
+    }
+
+    // Storage
+    function saveToStorage() {
+      AuthUI.apiFetch('/api/tools/gtm-lifecycle/state', { method: 'PUT', body: JSON.stringify(stages) });
+    }
+
+    async function loadStages() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/gtm-lifecycle/state');
+        const data = await resp.json();
+        return (data && Array.isArray(data) && data.length > 0) ? data : getDefaultStages();
+      } catch { return getDefaultStages(); }
+    }
+
+    // Export
+    function exportJSON() {
+      const data = {
+        name: 'GTM Lifecycle',
+        exportedAt: new Date().toISOString(),
+        stages: stages
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'gtm-lifecycle.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // Init
+    AuthUI.onLogin(async () => {
+      stages = await loadStages();
+      renderAll();
+    });
+    AuthUI.init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Capacity Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    /* Page-specific: Segment cards */
+    .segment-card {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent-blue);
+    }
+
+    .segment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .segment-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .segment-delete {
+      background: none;
+      border: none;
+      color: var(--accent-red);
+      cursor: pointer;
+      opacity: 0.7;
+    }
+
+    .segment-delete:hover { opacity: 1; }
+
+    .ramp-schedule {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .ramp-month {
+      background: var(--bg-input);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .ramp-month span {
+      color: var(--text-secondary);
+    }
+
+    /* Rep List */
+    .rep-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .rep-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .rep-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .rep-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .rep-segment {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--accent-purple);
+      color: white;
+    }
+
+    .rep-capacity {
+      text-align: right;
+    }
+
+    .rep-capacity-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .rep-capacity-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-purple);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 16px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-group {
+      display: flex;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .toggle-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .toggle-btn.active {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .summary-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .data-table .quarter-row td {
+      background: rgba(163, 113, 247, 0.1);
+      font-weight: 600;
+      border-top: 2px solid var(--accent-purple);
+    }
+
+    .data-table .quarter-row td:first-child {
+      background: rgba(163, 113, 247, 0.1);
+      color: var(--accent-purple);
+    }
+
+    .modal { width: 400px; }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>Sales Capacity Planner</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>👥 Sales Capacity Planner</h1>
+    <div class="header-actions">
+      <button class="btn" onclick="calculate()">📊 Calculate</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left Panel: Config -->
+    <div>
+      <!-- Segments -->
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Segment Templates</span>
+          <button class="btn btn-sm btn-purple" onclick="openSegmentModal()">+ Add</button>
+        </div>
+        <div id="segments-list">
+          <!-- Segments render here -->
+        </div>
+      </div>
+
+      <!-- Reps -->
+      <div class="card">
+        <div class="card-title">
+          <span>👤 Sales Reps</span>
+          <button class="btn btn-sm btn-green" onclick="openRepModal()">+ Add Rep</button>
+        </div>
+        <div class="rep-list" id="reps-list">
+          <div class="muted" style="text-align:center;padding:20px;">Add segments first, then add reps</div>
+        </div>
+      </div>
+
+      <!-- Global Settings -->
+      <div class="card">
+        <div class="card-title">⚙️ Global Settings</div>
+        <div class="input-group">
+          <label class="input-label">Expected Attainment % (for toggle)</label>
+          <input type="text" class="input-field" id="attainmentPct" value="85">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Plan Start Date</label>
+          <input type="date" class="input-field" id="planStart" value="2026-03-01">
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Output -->
+    <div class="card">
+      <div class="card-title">📈 Capacity Forecast (24 Months)</div>
+
+      <!-- Company Rollup -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:600;color:var(--accent-purple);margin-bottom:10px;text-transform:uppercase;">🏢 Company Roll Up</div>
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:12px;align-items:center;">
+          <div></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-secondary);text-transform:uppercase;">Reps</div>
+          <div style="text-align:center;font-size:10px;color:var(--text-secondary);text-transform:uppercase;">Quota Assigned</div>
+          <div style="text-align:center;font-size:10px;color:var(--text-secondary);text-transform:uppercase;">Expected Attainment</div>
+
+          <div style="font-size:11px;color:var(--text-secondary);">Year 1</div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value" style="font-size:20px;" id="sum-reps-y1">0</div></div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value" style="font-size:20px;" id="sum-quota-y1">$0</div></div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value positive" style="font-size:20px;" id="sum-expected-y1">$0</div></div>
+
+          <div style="font-size:11px;color:var(--text-secondary);">Year 2</div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value" style="font-size:20px;" id="sum-reps-y2">0</div></div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value" style="font-size:20px;" id="sum-quota-y2">$0</div></div>
+          <div class="summary-card" style="padding:10px;"><div class="summary-value positive" style="font-size:20px;" id="sum-expected-y2">$0</div></div>
+
+          <div style="font-size:11px;font-weight:600;color:var(--accent-green);">Exit (Ramped)</div>
+          <div class="summary-card" style="padding:10px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:20px;" id="sum-reps-exit">0</div></div>
+          <div class="summary-card" style="padding:10px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:20px;" id="sum-quota-exit">$0</div></div>
+          <div class="summary-card" style="padding:10px;background:rgba(63,185,80,0.1);"><div class="summary-value positive" style="font-size:20px;" id="sum-expected-exit">$0</div></div>
+        </div>
+      </div>
+
+      <!-- Segment Breakdowns -->
+      <div id="segment-summaries"></div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Reps</th>
+              <th>Ramped</th>
+              <th>Avg Ramp %</th>
+              <th>Quota (Street)</th>
+              <th>Expected</th>
+              <th>Cumulative</th>
+            </tr>
+          </thead>
+          <tbody id="capacity-body">
+            <tr><td colspan="7" class="muted" style="text-align:center">Add segments and reps to see forecast</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Segment Modal -->
+  <div class="modal-overlay" id="segment-modal">
+    <div class="modal">
+      <div class="modal-title">Add Segment Template</div>
+      <div class="input-group">
+        <label class="input-label">Segment Name</label>
+        <input type="text" class="input-field" id="seg-name" placeholder="Enterprise">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Annual Quota per Rep ($)</label>
+        <input type="text" class="input-field" id="seg-quota" value="1,000,000">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Ramp Schedule (comma-separated %)</label>
+        <input type="text" class="input-field" id="seg-ramp" value="0, 25, 50, 75, 100" placeholder="0, 25, 50, 75, 100">
+        <div style="font-size:10px;color:var(--text-secondary);margin-top:4px;">Month 1, Month 2, etc. Stays at last value after.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeSegmentModal()">Cancel</button>
+        <button class="btn btn-purple" onclick="addSegment()">Add Segment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Rep Modal -->
+  <div class="modal-overlay" id="rep-modal">
+    <div class="modal">
+      <div class="modal-title">Add Sales Rep</div>
+      <div class="input-row">
+        <div class="input-group">
+          <label class="input-label">Segment</label>
+          <select class="input-field" id="rep-segment"></select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">How Many?</label>
+          <input type="number" class="input-field" id="rep-count" value="1" min="1" max="50">
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Start Date</label>
+        <input type="date" class="input-field" id="rep-start">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Name Prefix (optional, will add #1, #2, etc.)</label>
+        <input type="text" class="input-field" id="rep-name" placeholder="New Hire">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Quota Override (optional, leave blank for segment default)</label>
+        <input type="text" class="input-field" id="rep-quota" placeholder="Use segment default">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeRepModal()">Cancel</button>
+        <button class="btn btn-green" onclick="addRep()">Add Rep</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    let segments = [];
+    let reps = [];
+    let viewMode = 'quota'; // 'quota' or 'attainment'
+
+    const SEGMENT_COLORS = ['purple', 'blue', 'green', 'orange', 'cyan'];
+
+    function parseNum(str) {
+      return parseFloat(String(str).replace(/[,$%]/g, '')) || 0;
+    }
+
+    function formatCurrency(n) {
+      if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+      return '$' + n.toFixed(0);
+    }
+
+    function setView(mode) {
+      viewMode = mode;
+      document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(mode === 'quota' ? 'full' : 'attainment'));
+      });
+      document.getElementById('sum-capacity-label').textContent = mode === 'quota' ? 'Annual Capacity' : 'Expected (w/ Attainment)';
+      calculate();
+    }
+
+    // Segment functions
+    function openSegmentModal() {
+      document.getElementById('seg-name').value = '';
+      document.getElementById('seg-quota').value = '1,000,000';
+      document.getElementById('seg-ramp').value = '0, 25, 50, 75, 100';
+      document.getElementById('segment-modal').classList.add('active');
+    }
+
+    function closeSegmentModal() {
+      document.getElementById('segment-modal').classList.remove('active');
+    }
+
+    function addSegment() {
+      const name = document.getElementById('seg-name').value.trim() || 'Segment ' + (segments.length + 1);
+      const quota = parseNum(document.getElementById('seg-quota').value);
+      const rampStr = document.getElementById('seg-ramp').value;
+      const ramp = rampStr.split(',').map(s => parseNum(s.trim()));
+
+      const color = SEGMENT_COLORS[segments.length % SEGMENT_COLORS.length];
+      segments.push({ id: 'seg_' + Date.now(), name, quota, ramp, color });
+
+      renderSegments();
+      closeSegmentModal();
+      updateRepSegmentDropdown();
+      saveToStorage();
+    }
+
+    function deleteSegment(id) {
+      segments = segments.filter(s => s.id !== id);
+      reps = reps.filter(r => r.segmentId !== id);
+      renderSegments();
+      renderReps();
+      updateRepSegmentDropdown();
+      saveToStorage();
+    }
+
+    function renderSegments() {
+      const container = document.getElementById('segments-list');
+      if (segments.length === 0) {
+        container.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">No segments defined</div>';
+        return;
+      }
+
+      container.innerHTML = segments.map(seg => `
+        <div class="segment-card" style="border-left-color: var(--accent-${seg.color})">
+          <div class="segment-header">
+            <span class="segment-name">${seg.name}</span>
+            <button class="segment-delete" onclick="deleteSegment('${seg.id}')">✕</button>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary)">
+            Quota: ${formatCurrency(seg.quota)}/yr
+          </div>
+          <div class="ramp-schedule">
+            ${seg.ramp.map((pct, i) => `<div class="ramp-month"><span>M${i+1}:</span> ${pct}%</div>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Rep functions
+    function openRepModal() {
+      if (segments.length === 0) {
+        alert('Add a segment first');
+        return;
+      }
+      document.getElementById('rep-name').value = '';
+      document.getElementById('rep-quota').value = '';
+      document.getElementById('rep-count').value = '1';
+
+      // Default start date to plan start
+      const planStart = document.getElementById('planStart').value;
+      document.getElementById('rep-start').value = planStart;
+
+      document.getElementById('rep-modal').classList.add('active');
+    }
+
+    function closeRepModal() {
+      document.getElementById('rep-modal').classList.remove('active');
+    }
+
+    function updateRepSegmentDropdown() {
+      const select = document.getElementById('rep-segment');
+      select.innerHTML = segments.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    function addRep() {
+      const namePrefix = document.getElementById('rep-name').value.trim() || 'New Hire';
+      const segmentId = document.getElementById('rep-segment').value;
+      const startDate = document.getElementById('rep-start').value;
+      const quotaOverride = document.getElementById('rep-quota').value ? parseNum(document.getElementById('rep-quota').value) : null;
+      const count = parseInt(document.getElementById('rep-count').value) || 1;
+
+      const seg = segments.find(s => s.id === segmentId);
+      const segName = seg ? seg.name : 'Rep';
+
+      for (let i = 0; i < count; i++) {
+        const name = count > 1 ? `${namePrefix} #${i + 1}` : namePrefix;
+        reps.push({
+          id: 'rep_' + Date.now() + '_' + i,
+          name,
+          segmentId,
+          startDate,
+          quotaOverride
+        });
+      }
+
+      renderReps();
+      closeRepModal();
+      calculate();
+      saveToStorage();
+    }
+
+    function deleteRep(id) {
+      reps = reps.filter(r => r.id !== id);
+      renderReps();
+      calculate();
+      saveToStorage();
+    }
+
+    function renderReps() {
+      const container = document.getElementById('reps-list');
+      if (reps.length === 0) {
+        container.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">No reps added yet</div>';
+        return;
+      }
+
+      container.innerHTML = reps.map(rep => {
+        const seg = segments.find(s => s.id === rep.segmentId);
+        const quota = rep.quotaOverride || (seg ? seg.quota : 0);
+        return `
+          <div class="rep-card">
+            <div>
+              <div class="rep-name">${rep.name}</div>
+              <div class="rep-meta">Starts: ${rep.startDate}</div>
+            </div>
+            <span class="rep-segment" style="background:var(--accent-${seg?.color || 'blue'})">${seg?.name || 'Unknown'}</span>
+            <div class="rep-capacity">
+              <div class="rep-capacity-value">${formatCurrency(quota)}</div>
+              <div class="rep-capacity-label">Annual Quota</div>
+            </div>
+            <button class="segment-delete" onclick="deleteRep('${rep.id}')">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Calculate capacity
+    function calculate() {
+      const planStart = new Date(document.getElementById('planStart').value);
+      const attainmentPct = parseNum(document.getElementById('attainmentPct').value) / 100;
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      // Build 24 months of data
+      const months = [];
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(planStart);
+        d.setMonth(d.getMonth() + i);
+        months.push({
+          date: d,
+          label: `${monthNames[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`,
+          quarter: Math.floor(d.getMonth() / 3) + 1,
+          year: d.getFullYear(),
+          reps: 0,
+          fullyRamped: 0,
+          totalRampPct: 0,
+          quotaCapacity: 0,
+          expectedCapacity: 0
+        });
+      }
+
+      // Process each rep
+      reps.forEach(rep => {
+        const seg = segments.find(s => s.id === rep.segmentId);
+        if (!seg) return;
+
+        const repStart = new Date(rep.startDate);
+        const quota = rep.quotaOverride || seg.quota;
+        const monthlyQuota = quota / 12;
+
+        months.forEach((month, i) => {
+          // Is rep active this month?
+          if (repStart <= month.date) {
+            month.reps++;
+
+            // Calculate months since start
+            const monthsActive = (month.date.getFullYear() - repStart.getFullYear()) * 12 +
+                                 (month.date.getMonth() - repStart.getMonth());
+
+            // Get ramp percentage
+            const rampIndex = Math.min(monthsActive, seg.ramp.length - 1);
+            const rampPct = seg.ramp[rampIndex] / 100;
+
+            month.totalRampPct += rampPct;
+            month.quotaCapacity += monthlyQuota;
+            month.expectedCapacity += monthlyQuota * rampPct;
+
+            if (rampPct >= 1) month.fullyRamped++;
+          }
+        });
+      });
+
+      // Calculate averages and cumulative
+      let cumulative = 0;
+      months.forEach(month => {
+        month.avgRamp = month.reps > 0 ? (month.totalRampPct / month.reps) * 100 : 0;
+
+        const capacity = viewMode === 'quota' ? month.quotaCapacity : month.expectedCapacity * attainmentPct;
+        cumulative += capacity;
+        month.cumulative = cumulative;
+        month.displayCapacity = capacity;
+      });
+
+      // Calculate segment-level metrics with Y1/Y2 breakdown
+      const segmentMetrics = {};
+      segments.forEach(seg => {
+        segmentMetrics[seg.id] = {
+          name: seg.name,
+          color: seg.color,
+          y1: { reps: 0, quota: 0, expected: 0 },
+          y2: { reps: 0, quota: 0, expected: 0 },
+          exit: { reps: 0, quota: 0, expected: 0 }
+        };
+      });
+
+      // Year boundaries
+      const y1End = new Date(planStart);
+      y1End.setMonth(y1End.getMonth() + 11);
+      const y2End = new Date(planStart);
+      y2End.setMonth(y2End.getMonth() + 23);
+
+      // Process reps for segment metrics
+      reps.forEach(rep => {
+        const seg = segments.find(s => s.id === rep.segmentId);
+        if (!seg) return;
+
+        const repStart = new Date(rep.startDate);
+        const quota = rep.quotaOverride || seg.quota;
+        const m = segmentMetrics[seg.id];
+
+        let y1Quota = 0, y1Expected = 0, y1Active = false;
+        let y2Quota = 0, y2Expected = 0, y2Active = false;
+
+        for (let i = 0; i < 24; i++) {
+          const monthDate = new Date(planStart);
+          monthDate.setMonth(monthDate.getMonth() + i);
+
+          if (repStart <= monthDate) {
+            const monthsActive = (monthDate.getFullYear() - repStart.getFullYear()) * 12 +
+                                 (monthDate.getMonth() - repStart.getMonth());
+            const rampIndex = Math.min(monthsActive, seg.ramp.length - 1);
+            const rampPct = seg.ramp[rampIndex] / 100;
+            const monthlyQuota = quota / 12;
+
+            if (i < 12) {
+              y1Quota += monthlyQuota;
+              y1Expected += monthlyQuota * rampPct * attainmentPct;
+              y1Active = true;
+            } else {
+              y2Quota += monthlyQuota;
+              y2Expected += monthlyQuota * rampPct * attainmentPct;
+              y2Active = true;
+            }
+          }
+        }
+
+        if (y1Active) {
+          m.y1.reps++;
+          m.y1.quota += y1Quota;
+          m.y1.expected += y1Expected;
+        }
+        if (y2Active) {
+          m.y2.reps++;
+          m.y2.quota += y2Quota;
+          m.y2.expected += y2Expected;
+        }
+
+        if (repStart <= y2End) {
+          m.exit.reps++;
+          m.exit.quota += quota;
+          m.exit.expected += quota * attainmentPct;
+        }
+      });
+
+      // Company totals
+      const companyTotals = {
+        y1: { reps: 0, quota: 0, expected: 0 },
+        y2: { reps: 0, quota: 0, expected: 0 },
+        exit: { reps: 0, quota: 0, expected: 0 }
+      };
+
+      Object.values(segmentMetrics).forEach(m => {
+        companyTotals.y1.reps = Math.max(companyTotals.y1.reps, m.y1.reps);
+        companyTotals.y1.quota += m.y1.quota;
+        companyTotals.y1.expected += m.y1.expected;
+        companyTotals.y2.reps = Math.max(companyTotals.y2.reps, m.y2.reps);
+        companyTotals.y2.quota += m.y2.quota;
+        companyTotals.y2.expected += m.y2.expected;
+        companyTotals.exit.reps += m.exit.reps;
+        companyTotals.exit.quota += m.exit.quota;
+        companyTotals.exit.expected += m.exit.expected;
+      });
+
+      companyTotals.y1.reps = Object.values(segmentMetrics).reduce((s, m) => s + m.y1.reps, 0);
+      companyTotals.y2.reps = Object.values(segmentMetrics).reduce((s, m) => s + m.y2.reps, 0);
+
+      // Update company summary
+      document.getElementById('sum-reps-y1').textContent = companyTotals.y1.reps;
+      document.getElementById('sum-quota-y1').textContent = formatCurrency(companyTotals.y1.quota);
+      document.getElementById('sum-expected-y1').textContent = formatCurrency(companyTotals.y1.expected);
+      document.getElementById('sum-reps-y2').textContent = companyTotals.y2.reps;
+      document.getElementById('sum-quota-y2').textContent = formatCurrency(companyTotals.y2.quota);
+      document.getElementById('sum-expected-y2').textContent = formatCurrency(companyTotals.y2.expected);
+      document.getElementById('sum-reps-exit').textContent = companyTotals.exit.reps;
+      document.getElementById('sum-quota-exit').textContent = formatCurrency(companyTotals.exit.quota);
+      document.getElementById('sum-expected-exit').textContent = formatCurrency(companyTotals.exit.expected);
+
+      // Render segment summaries
+      let segHtml = '';
+      segments.forEach(seg => {
+        const m = segmentMetrics[seg.id];
+        if (m.exit.reps === 0) return;
+        segHtml += `
+          <div style="margin-bottom:20px;">
+            <div style="font-size:12px;font-weight:600;color:var(--accent-${seg.color});margin-bottom:10px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              <span class="color-dot" style="background:var(--accent-${seg.color})"></span> ${seg.name}
+            </div>
+            <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px;align-items:center;font-size:12px;">
+              <div></div>
+              <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Reps</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Quota</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Expected</div>
+
+              <div style="font-size:10px;color:var(--text-secondary);">Y1</div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;">${m.y1.reps}</div></div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;">${formatCurrency(m.y1.quota)}</div></div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;color:var(--accent-green);">${formatCurrency(m.y1.expected)}</div></div>
+
+              <div style="font-size:10px;color:var(--text-secondary);">Y2</div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;">${m.y2.reps}</div></div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;">${formatCurrency(m.y2.quota)}</div></div>
+              <div class="summary-card" style="padding:8px;"><div style="font-size:16px;font-weight:600;text-align:center;color:var(--accent-green);">${formatCurrency(m.y2.expected)}</div></div>
+
+              <div style="font-size:10px;font-weight:600;color:var(--accent-green);">Exit</div>
+              <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div style="font-size:16px;font-weight:600;text-align:center;">${m.exit.reps}</div></div>
+              <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div style="font-size:16px;font-weight:600;text-align:center;">${formatCurrency(m.exit.quota)}</div></div>
+              <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div style="font-size:16px;font-weight:600;text-align:center;color:var(--accent-green);">${formatCurrency(m.exit.expected)}</div></div>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('segment-summaries').innerHTML = segHtml;
+
+      // Render table
+      let html = '';
+      let prevQuarter = null;
+      let quarterTotals = { quota: 0, expected: 0 };
+
+      months.forEach((month, i) => {
+        const currentQuarter = `Q${month.quarter} ${month.year}`;
+
+        if (prevQuarter && prevQuarter !== currentQuarter) {
+          html += `<tr class="quarter-row">
+            <td>${prevQuarter} Total</td>
+            <td></td><td></td><td></td>
+            <td>${formatCurrency(quarterTotals.quota)}</td>
+            <td>${formatCurrency(quarterTotals.expected)}</td>
+            <td></td>
+          </tr>`;
+          quarterTotals = { quota: 0, expected: 0 };
+        }
+
+        quarterTotals.quota += month.quotaCapacity;
+        quarterTotals.expected += month.expectedCapacity * attainmentPct;
+        prevQuarter = currentQuarter;
+
+        html += `<tr>
+          <td>${month.label}</td>
+          <td>${month.reps}</td>
+          <td>${month.fullyRamped}</td>
+          <td>${month.avgRamp.toFixed(0)}%</td>
+          <td>${formatCurrency(month.quotaCapacity)}</td>
+          <td class="${viewMode === 'attainment' ? 'positive' : ''}">${formatCurrency(month.expectedCapacity * attainmentPct)}</td>
+          <td class="muted">${formatCurrency(month.cumulative)}</td>
+        </tr>`;
+
+        if (i === months.length - 1) {
+          html += `<tr class="quarter-row">
+            <td>${currentQuarter} Total</td>
+            <td></td><td></td><td></td>
+            <td>${formatCurrency(quarterTotals.quota)}</td>
+            <td>${formatCurrency(quarterTotals.expected)}</td>
+            <td></td>
+          </tr>`;
+        }
+      });
+
+      document.getElementById('capacity-body').innerHTML = html || '<tr><td colspan="7" class="muted">Add reps to see forecast</td></tr>';
+    }
+
+    // Initialize with default segment
+    function initDefaults() {
+      segments.push({
+        id: 'seg_default_1',
+        name: 'Enterprise',
+        quota: 1200000,
+        ramp: [0, 25, 50, 75, 100],
+        color: 'purple'
+      });
+
+      segments.push({
+        id: 'seg_default_2',
+        name: 'Mid-Market',
+        quota: 800000,
+        ramp: [0, 33, 66, 100],
+        color: 'blue'
+      });
+
+      segments.push({
+        id: 'seg_default_3',
+        name: 'SMB',
+        quota: 500000,
+        ramp: [0, 50, 100],
+        color: 'green'
+      });
+
+      renderSegments();
+      updateRepSegmentDropdown();
+
+      // Set default plan start to beginning of next month
+      const today = new Date();
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      document.getElementById('planStart').value = nextMonth.toISOString().split('T')[0];
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // ── State Persistence ──
+    async function saveToStorage() {
+      try {
+        const data = {
+          segments: segments,
+          reps: reps,
+          attainmentPct: document.getElementById('attainmentPct').value,
+          planStart: document.getElementById('planStart').value
+        };
+        await AuthUI.apiFetch('/api/tools/sales-capacity/state', {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      } catch (e) { console.warn('Save failed:', e); }
+    }
+
+    async function loadFromStorage() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/sales-capacity/state');
+        if (!resp.ok) return false;
+        const json = await resp.json();
+        const data = json.state || json;
+        if (!data.segments || !data.segments.length) return false;
+
+        segments = data.segments;
+        reps = data.reps || [];
+        if (data.attainmentPct) document.getElementById('attainmentPct').value = data.attainmentPct;
+        if (data.planStart) document.getElementById('planStart').value = data.planStart;
+
+        renderSegments();
+        renderReps();
+        updateRepSegmentDropdown();
+        if (reps.length > 0) calculate();
+        return true;
+      } catch (e) { console.warn('Load failed:', e); return false; }
+    }
+
+    // Auth wiring
+    AuthUI.onLogin(async () => {
+      const loaded = await loadFromStorage();
+      if (!loaded) initDefaults();
+    });
+    AuthUI.init();
+  </script>
+</body>
+</html>

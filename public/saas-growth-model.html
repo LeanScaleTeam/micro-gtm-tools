@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B2B SaaS Growth Model</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 10px;
+      width: fit-content;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .tab.active {
+      background: var(--accent-blue);
+      color: white;
+    }
+    
+    .tab-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    
+    /* Segment Panel */
+    .segment-panel {
+      display: none;
+    }
+    
+    .segment-panel.active {
+      display: block;
+    }
+    
+    .layout { grid-template-columns: 400px 1fr; }
+    @media (max-width: 1300px) { .layout { grid-template-columns: 1fr; } }
+
+    .card { padding: 24px; }
+    .card-title { font-size: 14px; margin-bottom: 20px; }
+
+    .input-section {
+      margin-bottom: 20px;
+    }
+    
+    .input-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .input-field { padding: 8px 10px; }
+
+    .summary-grid { grid-template-columns: repeat(5, 1fr); }
+    .data-table th { font-size: 9px; }
+
+    /* Company Rollup */
+    .rollup-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid var(--accent-purple);
+    }
+    
+    .segment-breakdown {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .segment-card {
+      background: var(--bg-secondary);
+      padding: 16px;
+      border-radius: 10px;
+      border-left: 4px solid var(--accent-blue);
+    }
+    
+    .segment-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .segment-card-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .segment-metric {
+      text-align: center;
+    }
+    
+    .segment-metric-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .segment-metric-label {
+      font-size: 9px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+    
+    .color-enterprise { border-left-color: var(--accent-purple); }
+    .color-midmarket { border-left-color: var(--accent-blue); }
+    .color-smb { border-left-color: var(--accent-green); }
+    .color-startup { border-left-color: var(--accent-orange); }
+    
+    .delete-segment {
+      margin-left: auto;
+      background: transparent;
+      border: none;
+      color: var(--accent-red);
+      cursor: pointer;
+      font-size: 16px;
+      opacity: 0.7;
+    }
+    
+    .delete-segment:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>SaaS Growth Model</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>📊 B2B SaaS Growth Model</h1>
+    <div class="header-actions">
+      <button class="btn btn-green" onclick="addSegment()">+ Add Segment</button>
+      <button class="btn" onclick="calculateAll()">📊 Generate Plan</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-segment="rollup" onclick="switchTab('rollup')">
+      📈 Company Rollup
+    </button>
+  </div>
+
+  <!-- Company Rollup Panel -->
+  <div class="segment-panel active" id="panel-rollup">
+    <div class="card">
+      <div class="card-title">🏢 Company-Wide Summary (All Segments)</div>
+      
+      <div id="rollup-summary" class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-value positive" id="rollup-arr">--</div>
+          <div class="summary-label">Year 2 ARR</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="rollup-customers">--</div>
+          <div class="summary-label">Total Customers</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="rollup-team">--</div>
+          <div class="summary-label">Total Headcount</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="rollup-gm">--</div>
+          <div class="summary-label">Avg Gross Margin</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value positive" id="rollup-profit">--</div>
+          <div class="summary-label">Year 2 Net Profit</div>
+        </div>
+      </div>
+      
+      <div class="segment-breakdown" id="segment-breakdown">
+        <div class="empty-state">
+          Add segments to see breakdown
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="data-table" id="rollup-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>ARR</th>
+              <th>MRR</th>
+              <th>Bookings</th>
+              <th>Pipeline</th>
+              <th>Opps</th>
+              <th>Churn</th>
+              <th>New</th>
+              <th>Cust</th>
+              <th>Reps</th>
+              <th>CSM</th>
+              <th>Labor $</th>
+              <th>Gross $</th>
+              <th>GM%</th>
+              <th>Net $</th>
+            </tr>
+          </thead>
+          <tbody id="rollup-body">
+            <tr><td colspan="15" class="empty-state">Add segments and generate plan</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segment Panels Container -->
+  <div id="segment-panels"></div>
+
+  </div><!-- end app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    const SEGMENT_COLORS = ['purple', 'blue', 'green', 'orange', 'cyan', 'yellow'];
+    let segments = [];
+    let segmentResults = {};
+    
+    function parseNum(str) {
+      return parseFloat(String(str).replace(/[,$%]/g, '')) || 0;
+    }
+    
+    function formatCurrency(n) {
+      if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+      return '$' + n.toFixed(0);
+    }
+    
+    function addSegment() {
+      const id = 'seg_' + Date.now();
+      const colorIndex = segments.length % SEGMENT_COLORS.length;
+      const defaultNames = ['Enterprise', 'Mid-Market', 'SMB', 'Startup', 'Segment ' + (segments.length + 1)];
+      const name = defaultNames[segments.length] || 'Segment ' + (segments.length + 1);
+      
+      segments.push({ id, name, color: SEGMENT_COLORS[colorIndex] });
+      
+      // Add tab
+      const tab = document.createElement('button');
+      tab.className = 'tab';
+      tab.dataset.segment = id;
+      tab.innerHTML = `<span class="tab-color" style="background: var(--accent-${SEGMENT_COLORS[colorIndex]})"></span>${name}`;
+      tab.onclick = () => switchTab(id);
+      document.getElementById('tabs').appendChild(tab);
+      
+      // Add panel
+      const panel = document.createElement('div');
+      panel.className = 'segment-panel';
+      panel.id = 'panel-' + id;
+      panel.innerHTML = createSegmentPanel(id, name, SEGMENT_COLORS[colorIndex]);
+      document.getElementById('segment-panels').appendChild(panel);
+      
+      switchTab(id);
+    }
+    
+    function createSegmentPanel(id, name, color) {
+      return `
+        <div class="layout">
+          <div class="card">
+            <div class="card-title">
+              <span class="tab-color" style="background: var(--accent-${color})"></span>
+              <input type="text" class="input-field" value="${name}" style="background:transparent;border:none;font-size:14px;font-weight:600;padding:0;width:150px;" 
+                     onchange="renameSegment('${id}', this.value)">
+              <button class="delete-segment" onclick="deleteSegment('${id}')" title="Delete Segment">✕</button>
+            </div>
+            
+            <div class="input-section">
+              <div class="input-section-title">Revenue Targets</div>
+              <div class="input-group">
+                <label class="input-label">Current ARR ($)</label>
+                <input type="text" class="input-field" id="${id}-currentARR" value="1,000,000">
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">EOY ARR Target ($)</label>
+                  <input type="text" class="input-field" id="${id}-eoyARR" value="2,000,000">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Year 2 ARR Target ($)</label>
+                  <input type="text" class="input-field" id="${id}-year2ARR" value="4,000,000">
+                </div>
+              </div>
+            </div>
+            
+            <div class="input-section">
+              <div class="input-section-title">Sales Metrics</div>
+              <div class="input-row input-row-3">
+                <div class="input-group">
+                  <label class="input-label">Avg Deal Size ($)</label>
+                  <input type="text" class="input-field" id="${id}-avgDeal" value="50,000">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Win Rate (%)</label>
+                  <input type="text" class="input-field" id="${id}-winRate" value="25">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Sales Cycle (mo)</label>
+                  <input type="text" class="input-field" id="${id}-salesCycle" value="3">
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">Net Retention (%)</label>
+                  <input type="text" class="input-field" id="${id}-nrr" value="110">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Gross Churn (%/yr)</label>
+                  <input type="text" class="input-field" id="${id}-churn" value="10">
+                </div>
+              </div>
+            </div>
+            
+            <div class="input-section">
+              <div class="input-section-title">Capacity & Costs</div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">Quota/Rep ($)</label>
+                  <input type="text" class="input-field" id="${id}-quota" value="1,000,000">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Rep OTE ($)</label>
+                  <input type="text" class="input-field" id="${id}-repOTE" value="200,000">
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">Accounts/CSM</label>
+                  <input type="text" class="input-field" id="${id}-acctsPerCSM" value="30">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">CSM Salary ($)</label>
+                  <input type="text" class="input-field" id="${id}-csmSalary" value="120,000">
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">Reps/Manager</label>
+                  <input type="text" class="input-field" id="${id}-repsPerMgr" value="6">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Manager Salary ($)</label>
+                  <input type="text" class="input-field" id="${id}-mgrSalary" value="180,000">
+                </div>
+              </div>
+            </div>
+            
+            <div class="input-section">
+              <div class="input-section-title">Margins</div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label class="input-label">COGS % (non-labor)</label>
+                  <input type="text" class="input-field" id="${id}-cogs" value="15">
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Net Margin Target (%)</label>
+                  <input type="text" class="input-field" id="${id}-netMargin" value="15">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">📋 ${name} - 24-Month Projection</div>
+            
+            <div class="summary-grid" id="${id}-summary" style="display:none;">
+              <div class="summary-card">
+                <div class="summary-value positive" id="${id}-sum-arr">--</div>
+                <div class="summary-label">Year 2 ARR</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value" id="${id}-sum-cust">--</div>
+                <div class="summary-label">Customers</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value" id="${id}-sum-reps">--</div>
+                <div class="summary-label">Sales Reps</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value" id="${id}-sum-gm">--</div>
+                <div class="summary-label">Gross Margin</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value positive" id="${id}-sum-profit">--</div>
+                <div class="summary-label">Year 2 Net</div>
+              </div>
+            </div>
+            
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>ARR</th>
+                    <th>MRR</th>
+                    <th>Bookings</th>
+                    <th>Pipeline</th>
+                    <th>Opps</th>
+                    <th>Churn</th>
+                    <th>New</th>
+                    <th>Cust</th>
+                    <th>Reps</th>
+                    <th>CSM</th>
+                    <th>Mgrs</th>
+                    <th>Labor</th>
+                    <th>Gross</th>
+                    <th>GM%</th>
+                    <th>Net</th>
+                  </tr>
+                </thead>
+                <tbody id="${id}-body">
+                  <tr><td colspan="16" class="empty-state">Click Generate Plan</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function switchTab(segmentId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.segment-panel').forEach(p => p.classList.remove('active'));
+      
+      document.querySelector(`.tab[data-segment="${segmentId}"]`).classList.add('active');
+      document.getElementById('panel-' + segmentId).classList.add('active');
+    }
+    
+    function renameSegment(id, newName) {
+      const seg = segments.find(s => s.id === id);
+      if (seg) {
+        seg.name = newName;
+        const tab = document.querySelector(`.tab[data-segment="${id}"]`);
+        tab.innerHTML = `<span class="tab-color" style="background: var(--accent-${seg.color})"></span>${newName}`;
+      }
+    }
+    
+    function deleteSegment(id) {
+      if (!confirm('Delete this segment?')) return;
+      
+      segments = segments.filter(s => s.id !== id);
+      delete segmentResults[id];
+      
+      document.querySelector(`.tab[data-segment="${id}"]`).remove();
+      document.getElementById('panel-' + id).remove();
+      
+      switchTab('rollup');
+      updateRollup();
+    }
+    
+    function calculateSegment(id) {
+      const get = (field) => parseNum(document.getElementById(`${id}-${field}`).value);
+      
+      const currentARR = get('currentARR');
+      const eoyARR = get('eoyARR');
+      const year2ARR = get('year2ARR');
+      const avgDeal = get('avgDeal');
+      const winRate = get('winRate') / 100;
+      const salesCycle = get('salesCycle');
+      const nrr = get('nrr') / 100;
+      const grossChurn = get('churn') / 100;
+      const quota = get('quota');
+      const repOTE = get('repOTE');
+      const acctsPerCSM = get('acctsPerCSM');
+      const csmSalary = get('csmSalary');
+      const repsPerMgr = get('repsPerMgr');
+      const mgrSalary = get('mgrSalary');
+      const cogsRate = get('cogs') / 100;
+      const netMarginTarget = get('netMargin') / 100;
+      
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const monthsToEOY = 12 - currentMonth;
+      
+      const monthlyGrowthY1 = Math.pow(eoyARR / currentARR, 1 / monthsToEOY) - 1;
+      const monthlyGrowthY2 = Math.pow(year2ARR / eoyARR, 1 / 12) - 1;
+      const monthlyChurn = grossChurn / 12;
+      
+      let arr = currentARR;
+      let totalCustomers = Math.round(currentARR / avgDeal);
+      
+      const results = [];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const startYear = today.getFullYear();
+      
+      let y1Totals = { revenue: 0, bookings: 0, pipeline: 0, opps: 0, churn: 0, newCust: 0, labor: 0, gross: 0, net: 0 };
+      let y2Totals = { revenue: 0, bookings: 0, pipeline: 0, opps: 0, churn: 0, newCust: 0, labor: 0, gross: 0, net: 0 };
+      
+      for (let i = 0; i < 24; i++) {
+        const monthIndex = (currentMonth + i) % 12;
+        const year = startYear + Math.floor((currentMonth + i) / 12);
+        const monthLabel = `${monthNames[monthIndex]} '${String(year).slice(2)}`;
+        const isYear1 = i < monthsToEOY;
+        
+        const targetGrowth = isYear1 ? monthlyGrowthY1 : monthlyGrowthY2;
+        const targetARR = arr * (1 + targetGrowth);
+        const churnARR = arr * monthlyChurn;
+        const expansion = arr * ((nrr - 1 + grossChurn) / 12);
+        const requiredNewARR = Math.max(0, targetARR - arr + churnARR - expansion);
+        
+        const bookings = requiredNewARR;
+        // Pipeline needed NOW for deals closing in salesCycle months
+        const futurePipelineMonth = Math.min(i + salesCycle, 23);
+        const pipelineNeeded = bookings / winRate;
+        const opps = Math.ceil(pipelineNeeded / avgDeal);
+        const newCustomers = Math.round(bookings / avgDeal);
+        const churnedCustomers = Math.round(totalCustomers * monthlyChurn);
+        
+        totalCustomers = totalCustomers + newCustomers - churnedCustomers;
+        arr = targetARR;
+        const mrr = arr / 12;
+        
+        // Staffing
+        const annualBookings = bookings * 12;
+        const repsNeeded = Math.ceil(annualBookings / quota) || 1;
+        const csmsNeeded = Math.ceil(totalCustomers / acctsPerCSM);
+        const mgrsNeeded = Math.ceil((repsNeeded + csmsNeeded) / repsPerMgr);
+        
+        // Costs
+        const laborCost = (repsNeeded * repOTE / 12) + (csmsNeeded * csmSalary / 12) + (mgrsNeeded * mgrSalary / 12);
+        const cogsCost = mrr * cogsRate;
+        const grossProfit = mrr - laborCost - cogsCost;
+        const grossMarginPct = mrr > 0 ? (grossProfit / mrr * 100) : 0;
+        const netProfit = mrr * netMarginTarget;
+        
+        const totals = isYear1 ? y1Totals : y2Totals;
+        totals.revenue += mrr;
+        totals.bookings += bookings;
+        totals.pipeline += pipelineNeeded;
+        totals.opps += opps;
+        totals.churn += churnARR;
+        totals.newCust += newCustomers;
+        totals.labor += laborCost;
+        totals.gross += grossProfit;
+        totals.net += netProfit;
+        
+        results.push({
+          month: monthLabel,
+          isYear1End: i === monthsToEOY - 1,
+          isYear2End: i === 23,
+          arr, mrr, bookings, pipeline: pipelineNeeded, opps, churn: churnARR,
+          newCustomers, totalCustomers, reps: repsNeeded, csms: csmsNeeded, mgrs: mgrsNeeded,
+          laborCost, grossProfit, grossMarginPct, netProfit
+        });
+      }
+      
+      segmentResults[id] = { results, y1Totals, y2Totals, lastMonth: results[results.length - 1] };
+      
+      // Render
+      document.getElementById(`${id}-summary`).style.display = 'grid';
+      document.getElementById(`${id}-sum-arr`).textContent = formatCurrency(results[23].arr);
+      document.getElementById(`${id}-sum-cust`).textContent = results[23].totalCustomers;
+      document.getElementById(`${id}-sum-reps`).textContent = results[23].reps;
+      const avgGM = results.reduce((s, r) => s + r.grossMarginPct, 0) / 24;
+      document.getElementById(`${id}-sum-gm`).textContent = avgGM.toFixed(0) + '%';
+      document.getElementById(`${id}-sum-gm`).style.color = avgGM >= 60 ? 'var(--accent-green)' : avgGM >= 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+      document.getElementById(`${id}-sum-profit`).textContent = formatCurrency(y2Totals.net);
+      
+      let html = '';
+      for (const r of results) {
+        html += `<tr>
+          <td>${r.month}</td>
+          <td>${formatCurrency(r.arr)}</td>
+          <td>${formatCurrency(r.mrr)}</td>
+          <td>${formatCurrency(r.bookings)}</td>
+          <td>${formatCurrency(r.pipeline)}</td>
+          <td>${r.opps}</td>
+          <td class="negative">${formatCurrency(r.churn)}</td>
+          <td>${r.newCustomers}</td>
+          <td><strong>${r.totalCustomers}</strong></td>
+          <td>${r.reps}</td>
+          <td>${r.csms}</td>
+          <td>${r.mgrs}</td>
+          <td class="negative">${formatCurrency(r.laborCost)}</td>
+          <td class="${r.grossProfit >= 0 ? 'positive' : 'negative'}">${formatCurrency(r.grossProfit)}</td>
+          <td class="${r.grossMarginPct >= 50 ? 'positive' : ''}">${r.grossMarginPct.toFixed(0)}%</td>
+          <td class="positive">${formatCurrency(r.netProfit)}</td>
+        </tr>`;
+        
+        if (r.isYear1End) {
+          const t = y1Totals;
+          const gm = t.revenue > 0 ? (t.gross / t.revenue * 100) : 0;
+          html += `<tr class="year-subtotal">
+            <td>📊 Y1 TOTAL</td><td>${formatCurrency(r.arr)}</td><td>${formatCurrency(t.revenue)}</td>
+            <td>${formatCurrency(t.bookings)}</td><td>${formatCurrency(t.pipeline)}</td><td>${t.opps}</td>
+            <td class="negative">${formatCurrency(t.churn)}</td><td>${t.newCust}</td><td><strong>${r.totalCustomers}</strong></td>
+            <td>${r.reps}</td><td>${r.csms}</td><td>${r.mgrs}</td>
+            <td class="negative">${formatCurrency(t.labor)}</td><td class="${t.gross >= 0 ? 'positive' : 'negative'}">${formatCurrency(t.gross)}</td>
+            <td>${gm.toFixed(0)}%</td><td class="positive">${formatCurrency(t.net)}</td>
+          </tr>`;
+        }
+        
+        if (r.isYear2End) {
+          const t = y2Totals;
+          const gm = t.revenue > 0 ? (t.gross / t.revenue * 100) : 0;
+          html += `<tr class="year-subtotal">
+            <td>📊 Y2 TOTAL</td><td>${formatCurrency(r.arr)}</td><td>${formatCurrency(t.revenue)}</td>
+            <td>${formatCurrency(t.bookings)}</td><td>${formatCurrency(t.pipeline)}</td><td>${t.opps}</td>
+            <td class="negative">${formatCurrency(t.churn)}</td><td>${t.newCust}</td><td><strong>${r.totalCustomers}</strong></td>
+            <td>${r.reps}</td><td>${r.csms}</td><td>${r.mgrs}</td>
+            <td class="negative">${formatCurrency(t.labor)}</td><td class="${t.gross >= 0 ? 'positive' : 'negative'}">${formatCurrency(t.gross)}</td>
+            <td>${gm.toFixed(0)}%</td><td class="positive">${formatCurrency(t.net)}</td>
+          </tr>`;
+        }
+      }
+      document.getElementById(`${id}-body`).innerHTML = html;
+    }
+    
+    function calculateAll() {
+      segments.forEach(s => calculateSegment(s.id));
+      updateRollup();
+    }
+    
+    function updateRollup() {
+      if (segments.length === 0) {
+        document.getElementById('rollup-arr').textContent = '--';
+        document.getElementById('rollup-customers').textContent = '--';
+        document.getElementById('rollup-team').textContent = '--';
+        document.getElementById('rollup-gm').textContent = '--';
+        document.getElementById('rollup-profit').textContent = '--';
+        document.getElementById('segment-breakdown').innerHTML = '<div class="empty-state">Add segments to see breakdown</div>';
+        document.getElementById('rollup-body').innerHTML = '<tr><td colspan="15" class="empty-state">Add segments and generate plan</td></tr>';
+        return;
+      }
+      
+      // Aggregate all segments
+      let totalARR = 0, totalCustomers = 0, totalTeam = 0, totalProfit = 0;
+      let combinedResults = [];
+      
+      // Initialize 24 months of combined data with month labels
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const startYear = today.getFullYear();
+      const monthsToEOY = 12 - currentMonth;
+      
+      for (let i = 0; i < 24; i++) {
+        const monthIndex = (currentMonth + i) % 12;
+        const year = startYear + Math.floor((currentMonth + i) / 12);
+        combinedResults[i] = { 
+          month: `${monthNames[monthIndex]} '${String(year).slice(2)}`,
+          isYear1End: i === monthsToEOY - 1,
+          isYear2End: i === 23,
+          arr: 0, mrr: 0, bookings: 0, pipeline: 0, opps: 0, churn: 0, newCust: 0, totalCust: 0, reps: 0, csms: 0, labor: 0, gross: 0, net: 0 
+        };
+      }
+      
+      let y1Combined = { revenue: 0, bookings: 0, pipeline: 0, opps: 0, churn: 0, newCust: 0, labor: 0, gross: 0, net: 0 };
+      let y2Combined = { revenue: 0, bookings: 0, pipeline: 0, opps: 0, churn: 0, newCust: 0, labor: 0, gross: 0, net: 0 };
+      
+      segments.forEach(seg => {
+        const data = segmentResults[seg.id];
+        if (!data) return;
+        
+        totalARR += data.lastMonth.arr;
+        totalCustomers += data.lastMonth.totalCustomers;
+        totalTeam += data.lastMonth.reps + data.lastMonth.csms + data.lastMonth.mgrs;
+        totalProfit += data.y2Totals.net;
+        
+        // Combine Y1/Y2 totals
+        Object.keys(y1Combined).forEach(k => { y1Combined[k] += data.y1Totals[k]; });
+        Object.keys(y2Combined).forEach(k => { y2Combined[k] += data.y2Totals[k]; });
+        
+        // Combine monthly
+        data.results.forEach((r, i) => {
+          combinedResults[i].arr += r.arr;
+          combinedResults[i].mrr += r.mrr;
+          combinedResults[i].bookings += r.bookings;
+          combinedResults[i].pipeline += r.pipeline;
+          combinedResults[i].opps += r.opps;
+          combinedResults[i].churn += r.churn;
+          combinedResults[i].newCust += r.newCustomers;
+          combinedResults[i].totalCust += r.totalCustomers;
+          combinedResults[i].reps += r.reps;
+          combinedResults[i].csms += r.csms;
+          combinedResults[i].labor += r.laborCost;
+          combinedResults[i].gross += r.grossProfit;
+          combinedResults[i].net += r.netProfit;
+        });
+      });
+      
+      // Update summary
+      document.getElementById('rollup-arr').textContent = formatCurrency(totalARR);
+      document.getElementById('rollup-customers').textContent = totalCustomers;
+      document.getElementById('rollup-team').textContent = totalTeam;
+      const avgGM = y2Combined.revenue > 0 ? (y2Combined.gross / y2Combined.revenue * 100) : 0;
+      document.getElementById('rollup-gm').textContent = avgGM.toFixed(0) + '%';
+      document.getElementById('rollup-gm').style.color = avgGM >= 60 ? 'var(--accent-green)' : avgGM >= 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+      document.getElementById('rollup-profit').textContent = formatCurrency(totalProfit);
+      
+      // Segment breakdown cards
+      let breakdownHTML = '';
+      segments.forEach(seg => {
+        const data = segmentResults[seg.id];
+        if (!data) return;
+        breakdownHTML += `
+          <div class="segment-card color-${seg.color}">
+            <div class="segment-card-title">
+              <span class="tab-color" style="background: var(--accent-${seg.color})"></span>
+              ${seg.name}
+            </div>
+            <div class="segment-card-metrics">
+              <div class="segment-metric">
+                <div class="segment-metric-value">${formatCurrency(data.lastMonth.arr)}</div>
+                <div class="segment-metric-label">Y2 ARR</div>
+              </div>
+              <div class="segment-metric">
+                <div class="segment-metric-value">${data.lastMonth.totalCustomers}</div>
+                <div class="segment-metric-label">Customers</div>
+              </div>
+              <div class="segment-metric">
+                <div class="segment-metric-value">${data.lastMonth.reps + data.lastMonth.csms}</div>
+                <div class="segment-metric-label">Headcount</div>
+              </div>
+              <div class="segment-metric">
+                <div class="segment-metric-value">${formatCurrency(data.y2Totals.net)}</div>
+                <div class="segment-metric-label">Y2 Profit</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('segment-breakdown').innerHTML = breakdownHTML;
+      
+      // Combined table
+      let html = '';
+      combinedResults.forEach(r => {
+        const gmPct = r.mrr > 0 ? (r.gross / r.mrr * 100) : 0;
+        html += `<tr>
+          <td>${r.month}</td>
+          <td>${formatCurrency(r.arr)}</td>
+          <td>${formatCurrency(r.mrr)}</td>
+          <td>${formatCurrency(r.bookings)}</td>
+          <td>${formatCurrency(r.pipeline)}</td>
+          <td>${r.opps}</td>
+          <td class="negative">${formatCurrency(r.churn)}</td>
+          <td>${r.newCust}</td>
+          <td><strong>${r.totalCust}</strong></td>
+          <td>${r.reps}</td>
+          <td>${r.csms}</td>
+          <td class="negative">${formatCurrency(r.labor)}</td>
+          <td class="${r.gross >= 0 ? 'positive' : 'negative'}">${formatCurrency(r.gross)}</td>
+          <td class="${gmPct >= 50 ? 'positive' : ''}">${gmPct.toFixed(0)}%</td>
+          <td class="positive">${formatCurrency(r.net)}</td>
+        </tr>`;
+        
+        if (r.isYear1End) {
+          const gm = y1Combined.revenue > 0 ? (y1Combined.gross / y1Combined.revenue * 100) : 0;
+          html += `<tr class="year-subtotal">
+            <td>📊 Y1 TOTAL</td><td>${formatCurrency(r.arr)}</td><td>${formatCurrency(y1Combined.revenue)}</td>
+            <td>${formatCurrency(y1Combined.bookings)}</td><td>${formatCurrency(y1Combined.pipeline)}</td><td>${y1Combined.opps}</td>
+            <td class="negative">${formatCurrency(y1Combined.churn)}</td><td>${y1Combined.newCust}</td><td><strong>${r.totalCust}</strong></td>
+            <td>${r.reps}</td><td>${r.csms}</td>
+            <td class="negative">${formatCurrency(y1Combined.labor)}</td><td class="${y1Combined.gross >= 0 ? 'positive' : 'negative'}">${formatCurrency(y1Combined.gross)}</td>
+            <td>${gm.toFixed(0)}%</td><td class="positive">${formatCurrency(y1Combined.net)}</td>
+          </tr>`;
+        }
+        
+        if (r.isYear2End) {
+          const gm = y2Combined.revenue > 0 ? (y2Combined.gross / y2Combined.revenue * 100) : 0;
+          html += `<tr class="year-subtotal">
+            <td>📊 Y2 TOTAL</td><td>${formatCurrency(r.arr)}</td><td>${formatCurrency(y2Combined.revenue)}</td>
+            <td>${formatCurrency(y2Combined.bookings)}</td><td>${formatCurrency(y2Combined.pipeline)}</td><td>${y2Combined.opps}</td>
+            <td class="negative">${formatCurrency(y2Combined.churn)}</td><td>${y2Combined.newCust}</td><td><strong>${r.totalCust}</strong></td>
+            <td>${r.reps}</td><td>${r.csms}</td>
+            <td class="negative">${formatCurrency(y2Combined.labor)}</td><td class="${y2Combined.gross >= 0 ? 'positive' : 'negative'}">${formatCurrency(y2Combined.gross)}</td>
+            <td>${gm.toFixed(0)}%</td><td class="positive">${formatCurrency(y2Combined.net)}</td>
+          </tr>`;
+        }
+      });
+      document.getElementById('rollup-body').innerHTML = html;
+    }
+
+    // ── State Persistence ──
+    const INPUT_FIELDS = ['currentARR','eoyARR','year2ARR','avgDeal','winRate','salesCycle','nrr','churn','quota','repOTE','acctsPerCSM','csmSalary','repsPerMgr','mgrSalary','cogs','netMargin'];
+
+    function collectState() {
+      return {
+        segments: segments.map(s => {
+          const values = {};
+          INPUT_FIELDS.forEach(f => {
+            const el = document.getElementById(`${s.id}-${f}`);
+            if (el) values[f] = el.value;
+          });
+          return { id: s.id, name: s.name, color: s.color, values };
+        })
+      };
+    }
+
+    async function saveToStorage() {
+      try {
+        const data = collectState();
+        await AuthUI.apiFetch('/api/tools/saas-growth-model/state', {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      } catch (e) { console.warn('Save failed:', e); }
+    }
+
+    async function loadFromStorage() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/saas-growth-model/state');
+        if (!resp.ok) return;
+        const json = await resp.json();
+        const data = json.state || json;
+        if (!data.segments || !data.segments.length) return;
+
+        // Clear existing
+        segments = [];
+        segmentResults = {};
+        document.getElementById('segment-panels').innerHTML = '';
+        document.querySelectorAll('.tab:not([data-segment="rollup"])').forEach(t => t.remove());
+
+        // Rebuild each segment
+        data.segments.forEach(s => {
+          segments.push({ id: s.id, name: s.name, color: s.color });
+
+          const tab = document.createElement('button');
+          tab.className = 'tab';
+          tab.dataset.segment = s.id;
+          tab.innerHTML = `<span class="tab-color" style="background: var(--accent-${s.color})"></span>${s.name}`;
+          tab.onclick = () => switchTab(s.id);
+          document.getElementById('tabs').appendChild(tab);
+
+          const panel = document.createElement('div');
+          panel.className = 'segment-panel';
+          panel.id = 'panel-' + s.id;
+          panel.innerHTML = createSegmentPanel(s.id, s.name, s.color);
+          document.getElementById('segment-panels').appendChild(panel);
+
+          // Restore input values
+          if (s.values) {
+            INPUT_FIELDS.forEach(f => {
+              const el = document.getElementById(`${s.id}-${f}`);
+              if (el && s.values[f] !== undefined) el.value = s.values[f];
+            });
+          }
+        });
+
+        switchTab('rollup');
+        calculateAll();
+      } catch (e) { console.warn('Load failed:', e); }
+    }
+
+    // Wrap calculateAll to auto-save
+    const _origCalculateAll = calculateAll;
+    calculateAll = function() {
+      _origCalculateAll();
+      saveToStorage();
+    };
+
+    // Auth wiring
+    AuthUI.onLogin(async () => {
+      await loadFromStorage();
+    });
+    AuthUI.init();
+  </script>
+</body>
+</html>

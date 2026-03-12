@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Source Taxonomy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    .layout { grid-template-columns: 400px 1fr; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+    textarea.input-field { min-height: 70px; }
+
+    /* Source List */
+    .source-list {
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+    
+    .source-item {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--accent-blue);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .source-item:hover {
+      background: #232a3b;
+    }
+    
+    .source-item.active {
+      border-left-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+    }
+    
+    .source-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    .source-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .source-channel-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .source-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    
+    .source-meta {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+    
+    .source-actions {
+      display: flex;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    
+    .source-action-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 14px;
+      opacity: 0.6;
+    }
+    
+    .source-action-btn:hover {
+      opacity: 1;
+      background: var(--bg-input);
+    }
+    
+    .source-action-btn.delete:hover {
+      color: var(--accent-red);
+    }
+    
+    /* Channel colors */
+    .channel-paid { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); border-color: var(--accent-blue); }
+    .channel-organic { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); border-color: var(--accent-green); }
+    .channel-referral { background: rgba(163, 113, 247, 0.2); color: var(--accent-purple); border-color: var(--accent-purple); }
+    .channel-events { background: rgba(240, 136, 62, 0.2); color: var(--accent-orange); border-color: var(--accent-orange); }
+    .channel-outbound { background: rgba(57, 197, 207, 0.2); color: var(--accent-cyan); border-color: var(--accent-cyan); }
+    .channel-direct { background: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border-color: var(--accent-yellow); }
+    .channel-partner { background: rgba(219, 97, 162, 0.2); color: var(--accent-pink); border-color: var(--accent-pink); }
+    
+    /* Taxonomy Tree */
+    .taxonomy-container {
+      margin-bottom: 20px;
+    }
+    
+    .channel-group {
+      margin-bottom: 16px;
+    }
+    
+    .channel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .channel-header:hover {
+      background: #232a3b;
+    }
+    
+    .channel-header .count {
+      background: var(--bg-input);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    .channel-header .icon {
+      font-size: 18px;
+    }
+    
+    .channel-sources {
+      margin-left: 24px;
+      padding-left: 16px;
+      border-left: 2px solid var(--border);
+      margin-top: 8px;
+    }
+    
+    .channel-source-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .channel-source-item:hover {
+      background: var(--bg-input);
+    }
+    
+    .channel-source-item .entry-method {
+      font-size: 10px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    
+    /* Summary Table */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    
+    .summary-table th {
+      text-align: left;
+      padding: 12px 10px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    
+    .summary-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    
+    .summary-table tr:hover td {
+      background: var(--bg-secondary);
+    }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-card {
+      background: var(--bg-secondary);
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    
+    .modal { width: 520px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    
+    .tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.2s;
+    }
+    
+    .tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+    
+    .tab.active {
+      color: var(--accent-blue);
+      background: var(--bg-secondary);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Attribution Options */
+    .attribution-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .attribution-option {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .attribution-option:hover {
+      border-color: var(--accent-blue);
+      background: #232a3b;
+    }
+    
+    .attribution-option.active {
+      border-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+    }
+    
+    .attribution-option.recommended {
+      position: relative;
+    }
+    
+    .attribution-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    
+    .attribution-radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .attribution-option.active .attribution-radio {
+      border-color: var(--accent-green);
+      background: var(--accent-green);
+    }
+    
+    .attribution-option.active .attribution-radio::after {
+      content: '✓';
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .attribution-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .attribution-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-left: 28px;
+    }
+    
+    .recommended-badge {
+      background: var(--accent-green);
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+    
+    /* Print overrides */
+    @media print {
+      .source-actions, .tabs { display: none !important; }
+      .layout { display: block; }
+      .layout > div:first-child { display: none; }
+      .channel-header { background: #f5f5f5; }
+      .channel-source-item { background: #fafafa; }
+      .stat-card { background: #f5f5f5; }
+      .summary-table th { background: #f0f0f0; }
+      .tab-content { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>Lead Sources</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>🏷️ Lead Source Taxonomy</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
+      <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left: Source List -->
+    <div>
+      <!-- Attribution Methodology -->
+      <div class="card">
+        <div class="card-title">🎯 Attribution Methodology</div>
+        <div class="attribution-options" id="attribution-options">
+          <div class="attribution-option" data-method="first-touch" onclick="selectAttribution('first-touch')">
+            <div class="attribution-header">
+              <span class="attribution-radio"></span>
+              <span class="attribution-name">First Touch</span>
+            </div>
+            <div class="attribution-desc">Credits 100% to the first interaction. Best for understanding top-of-funnel acquisition channels.</div>
+          </div>
+          
+          <div class="attribution-option" data-method="last-touch" onclick="selectAttribution('last-touch')">
+            <div class="attribution-header">
+              <span class="attribution-radio"></span>
+              <span class="attribution-name">Last Touch</span>
+            </div>
+            <div class="attribution-desc">Credits 100% to the final interaction before conversion. Good for bottom-of-funnel optimization.</div>
+          </div>
+          
+          <div class="attribution-option recommended active" data-method="multi-touch-influence" onclick="selectAttribution('multi-touch-influence')">
+            <div class="attribution-header">
+              <span class="attribution-radio"></span>
+              <span class="attribution-name">Multi-Touch Influence</span>
+              <span class="recommended-badge">✓ Recommended</span>
+            </div>
+            <div class="attribution-desc">Credits all touchpoints that influenced the deal. Provides complete visibility into the buyer journey without complex weighting.</div>
+          </div>
+          
+          <div class="attribution-option" data-method="multi-touch-weighted" onclick="selectAttribution('multi-touch-weighted')">
+            <div class="attribution-header">
+              <span class="attribution-radio"></span>
+              <span class="attribution-name">Multi-Touch Weighted</span>
+            </div>
+            <div class="attribution-desc">Distributes credit across touchpoints with custom weighting (e.g., 40% first, 40% last, 20% middle). More complex to implement and maintain.</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Lead Sources</span>
+          <button class="btn btn-sm btn-green" onclick="openAddModal()">+ Add Source</button>
+        </div>
+        <div class="source-list" id="source-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">🎨 Channels</div>
+        <div id="channel-legend">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Taxonomy View -->
+    <div>
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-sources">0</div>
+          <div class="stat-label">Lead Sources</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-channels">0</div>
+          <div class="stat-label">Channels</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-methods">0</div>
+          <div class="stat-label">Entry Methods</div>
+        </div>
+        <div class="stat-card" style="background:rgba(63,185,80,0.1);border:1px solid var(--accent-green);">
+          <div class="stat-value" style="font-size:14px;color:var(--accent-green);" id="stat-attribution">Multi-Touch Influence</div>
+          <div class="stat-label">Attribution Model</div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('hierarchy')">📊 Hierarchy View</button>
+          <button class="tab" onclick="switchTab('table')">📋 Table View</button>
+        </div>
+        
+        <div class="tab-content active" id="tab-hierarchy">
+          <div class="taxonomy-container" id="taxonomy-tree">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        
+        <div class="tab-content" id="tab-table">
+          <div style="max-height:60vh;overflow-y:auto;">
+            <table class="summary-table" id="summary-table">
+              <!-- Populated by JS -->
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Source Modal -->
+  <div class="modal-overlay" id="source-modal">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">➕ Add Lead Source</div>
+      
+      <div class="input-group">
+        <label class="input-label">Source Name</label>
+        <input type="text" class="input-field" id="source-name" placeholder="e.g., Google Ads - Brand, LinkedIn Organic">
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Channel (Rollup)</label>
+        <select class="input-field" id="source-channel">
+          <option value="Paid">Paid</option>
+          <option value="Organic">Organic</option>
+          <option value="Referral">Referral</option>
+          <option value="Events">Events</option>
+          <option value="Outbound">Outbound</option>
+          <option value="Direct">Direct</option>
+          <option value="Partner">Partner</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Entry Method</label>
+        <select class="input-field" id="source-entry">
+          <option value="Form Fill">Form Fill</option>
+          <option value="Import">Import</option>
+          <option value="API Integration">API Integration</option>
+          <option value="Manual Entry">Manual Entry</option>
+          <option value="Chat/Bot">Chat/Bot</option>
+          <option value="Event Registration">Event Registration</option>
+          <option value="Partner Portal">Partner Portal</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Description</label>
+        <textarea class="input-field" id="source-description" placeholder="Describe this lead source and when it's used..."></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-green" id="modal-save-btn" onclick="saveSource()">Add Source</button>
+      </div>
+    </div>
+  </div>
+  </div><!-- end #app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    // Default channels with icons and colors
+    const CHANNELS = {
+      'Paid': { icon: '💰', color: 'paid', description: 'Paid advertising and sponsored content' },
+      'Organic': { icon: '🌱', color: 'organic', description: 'Organic search and social' },
+      'Referral': { icon: '🤝', color: 'referral', description: 'Customer and employee referrals' },
+      'Events': { icon: '🎪', color: 'events', description: 'Conferences, webinars, and events' },
+      'Outbound': { icon: '📤', color: 'outbound', description: 'SDR/BDR outreach and prospecting' },
+      'Direct': { icon: '🎯', color: 'direct', description: 'Direct traffic and typed URLs' },
+      'Partner': { icon: '🤝', color: 'partner', description: 'Partner and channel referrals' }
+    };
+
+    // Default sources
+    const DEFAULT_SOURCES = [
+      // Paid
+      { id: 'ls1', name: 'Google Ads - Brand', channel: 'Paid', entry: 'Form Fill', description: 'Paid search ads targeting brand keywords. High intent, typically bottom-of-funnel.' },
+      { id: 'ls2', name: 'Google Ads - Non-Brand', channel: 'Paid', entry: 'Form Fill', description: 'Paid search ads targeting category and competitor keywords. Mid-funnel awareness and consideration.' },
+      { id: 'ls3', name: 'LinkedIn Ads', channel: 'Paid', entry: 'Form Fill', description: 'LinkedIn sponsored content and InMail campaigns. Strong B2B targeting by title, company, industry.' },
+      { id: 'ls4', name: 'Facebook/Meta Ads', channel: 'Paid', entry: 'Form Fill', description: 'Facebook and Instagram advertising. Good for retargeting and lookalike audiences.' },
+      { id: 'ls5', name: 'Display/Programmatic', channel: 'Paid', entry: 'Form Fill', description: 'Display advertising via Google Display Network or programmatic platforms.' },
+      
+      // Organic
+      { id: 'ls6', name: 'Organic Search (SEO)', channel: 'Organic', entry: 'Form Fill', description: 'Leads from organic Google/Bing search results. Content and SEO-driven.' },
+      { id: 'ls7', name: 'LinkedIn Organic', channel: 'Organic', entry: 'Form Fill', description: 'Leads from organic LinkedIn posts, articles, and profile engagement.' },
+      { id: 'ls8', name: 'Twitter/X Organic', channel: 'Organic', entry: 'Form Fill', description: 'Leads from organic Twitter engagement and content.' },
+      { id: 'ls9', name: 'Blog/Content', channel: 'Organic', entry: 'Form Fill', description: 'Leads from blog posts, guides, and gated content assets.' },
+      
+      // Referral
+      { id: 'ls10', name: 'Customer Referral', channel: 'Referral', entry: 'Manual Entry', description: 'Referrals from existing customers. Typically highest quality and conversion rate.' },
+      { id: 'ls11', name: 'Employee Referral', channel: 'Referral', entry: 'Manual Entry', description: 'Referrals from employees\' professional networks.' },
+      { id: 'ls12', name: 'Investor Referral', channel: 'Referral', entry: 'Manual Entry', description: 'Warm introductions from investors and board members.' },
+      
+      // Events
+      { id: 'ls13', name: 'Conference/Tradeshow', channel: 'Events', entry: 'Event Registration', description: 'Leads from booth visits, badge scans, and conference meetings.' },
+      { id: 'ls14', name: 'Webinar', channel: 'Events', entry: 'Event Registration', description: 'Leads from webinar registrations and attendees.' },
+      { id: 'ls15', name: 'Workshop/Training', channel: 'Events', entry: 'Event Registration', description: 'Leads from hands-on workshops and training sessions.' },
+      
+      // Outbound
+      { id: 'ls16', name: 'SDR Cold Outreach', channel: 'Outbound', entry: 'Manual Entry', description: 'Leads generated via SDR cold email and LinkedIn outreach.' },
+      { id: 'ls17', name: 'ABM Campaign', channel: 'Outbound', entry: 'Manual Entry', description: 'Account-based marketing campaigns targeting specific companies.' },
+      { id: 'ls18', name: 'Cold Call', channel: 'Outbound', entry: 'Manual Entry', description: 'Leads from outbound phone prospecting.' },
+      
+      // Direct
+      { id: 'ls19', name: 'Direct Traffic', channel: 'Direct', entry: 'Form Fill', description: 'Typed URL or bookmarked visits. Often returning visitors or word-of-mouth.' },
+      { id: 'ls20', name: 'Demo Request (Direct)', channel: 'Direct', entry: 'Form Fill', description: 'Direct demo requests from website. Highest intent.' },
+      
+      // Partner
+      { id: 'ls21', name: 'Partner Referral', channel: 'Partner', entry: 'Partner Portal', description: 'Leads from channel partners, resellers, and alliance partners.' },
+      { id: 'ls22', name: 'Integration Partner', channel: 'Partner', entry: 'API Integration', description: 'Leads from technology and integration partners.' },
+    ];
+
+    let sources = JSON.parse(JSON.stringify(DEFAULT_SOURCES));
+    let selectedSourceId = null;
+    let editingSourceId = null;
+    let selectedAttribution = 'multi-touch-influence'; // Default to recommended
+
+    function getChannelClass(channel) {
+      return 'channel-' + (CHANNELS[channel]?.color || 'paid');
+    }
+
+    function renderSourceList() {
+      const container = document.getElementById('source-list');
+      
+      if (sources.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No sources defined. Click "+ Add Source" to begin.</div>';
+        return;
+      }
+      
+      // Group by channel for the list
+      const grouped = {};
+      sources.forEach(s => {
+        if (!grouped[s.channel]) grouped[s.channel] = [];
+        grouped[s.channel].push(s);
+      });
+      
+      container.innerHTML = sources.map(source => `
+        <div class="source-item ${selectedSourceId === source.id ? 'active' : ''}" 
+             data-id="${source.id}"
+             style="border-left-color: var(--accent-${CHANNELS[source.channel]?.color || 'blue'})"
+             onclick="selectSource('${source.id}')">
+          <div class="source-header">
+            <div>
+              <span class="source-name">${source.name}</span>
+              <span class="source-channel-badge ${getChannelClass(source.channel)}">${source.channel}</span>
+            </div>
+            <div class="source-actions">
+              <button class="source-action-btn" onclick="event.stopPropagation(); editSource('${source.id}')" title="Edit">✎</button>
+              <button class="source-action-btn delete" onclick="event.stopPropagation(); deleteSource('${source.id}')" title="Delete">✕</button>
+            </div>
+          </div>
+          <div class="source-description">${source.description || ''}</div>
+          <div class="source-meta">
+            <span>📥 ${source.entry}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderChannelLegend() {
+      const container = document.getElementById('channel-legend');
+      const usedChannels = [...new Set(sources.map(s => s.channel))];
+      
+      container.innerHTML = Object.entries(CHANNELS).map(([name, config]) => {
+        const count = sources.filter(s => s.channel === name).length;
+        return `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:18px;">${config.icon}</span>
+            <span class="source-channel-badge ${getChannelClass(name)}" style="min-width:80px;text-align:center;">${name}</span>
+            <span style="font-size:12px;color:var(--text-secondary);flex:1;">${config.description}</span>
+            <span style="font-size:12px;background:var(--bg-input);padding:2px 8px;border-radius:10px;">${count}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTaxonomyTree() {
+      const container = document.getElementById('taxonomy-tree');
+      
+      // Group sources by channel
+      const grouped = {};
+      Object.keys(CHANNELS).forEach(ch => grouped[ch] = []);
+      sources.forEach(s => {
+        if (!grouped[s.channel]) grouped[s.channel] = [];
+        grouped[s.channel].push(s);
+      });
+      
+      container.innerHTML = Object.entries(grouped)
+        .filter(([_, items]) => items.length > 0)
+        .map(([channel, items]) => {
+          const config = CHANNELS[channel] || { icon: '📁', color: 'blue' };
+          return `
+            <div class="channel-group">
+              <div class="channel-header ${getChannelClass(channel)}" style="border-left:4px solid;">
+                <span class="icon">${config.icon}</span>
+                <span>${channel}</span>
+                <span class="count">${items.length} sources</span>
+              </div>
+              <div class="channel-sources">
+                ${items.map(source => `
+                  <div class="channel-source-item" onclick="selectSource('${source.id}')">
+                    <span>${source.name}</span>
+                    <span class="entry-method">📥 ${source.entry}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+      
+      if (container.innerHTML === '') {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">Add lead sources to build your taxonomy</div>';
+      }
+    }
+
+    function renderSummaryTable() {
+      const table = document.getElementById('summary-table');
+      
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Lead Source</th>
+            <th>Channel</th>
+            <th>Entry Method</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sources.map(source => `
+            <tr onclick="selectSource('${source.id}')" style="cursor:pointer;">
+              <td style="font-weight:600;">${source.name}</td>
+              <td><span class="source-channel-badge ${getChannelClass(source.channel)}">${source.channel}</span></td>
+              <td>${source.entry}</td>
+              <td style="color:var(--text-secondary);font-size:11px;max-width:300px;">${source.description || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+    }
+
+    function renderStats() {
+      const ATTRIBUTION_LABELS = {
+        'first-touch': 'First Touch',
+        'last-touch': 'Last Touch',
+        'multi-touch-influence': 'Multi-Touch Influence',
+        'multi-touch-weighted': 'Multi-Touch Weighted'
+      };
+      document.getElementById('stat-sources').textContent = sources.length;
+      document.getElementById('stat-channels').textContent = [...new Set(sources.map(s => s.channel))].length;
+      document.getElementById('stat-methods').textContent = [...new Set(sources.map(s => s.entry))].length;
+      document.getElementById('stat-attribution').textContent = ATTRIBUTION_LABELS[selectedAttribution] || 'Multi-Touch Influence';
+    }
+
+    function renderAll() {
+      renderSourceList();
+      renderChannelLegend();
+      renderTaxonomyTree();
+      renderSummaryTable();
+      renderStats();
+    }
+
+    function selectSource(id) {
+      selectedSourceId = selectedSourceId === id ? null : id;
+      renderSourceList();
+      
+      // If selected, show detail modal
+      if (selectedSourceId) {
+        editSource(id);
+      }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function openAddModal() {
+      editingSourceId = null;
+      document.getElementById('modal-title').textContent = '➕ Add Lead Source';
+      document.getElementById('modal-save-btn').textContent = 'Add Source';
+      document.getElementById('source-name').value = '';
+      document.getElementById('source-channel').value = 'Paid';
+      document.getElementById('source-entry').value = 'Form Fill';
+      document.getElementById('source-description').value = '';
+      document.getElementById('source-modal').classList.add('active');
+      document.getElementById('source-name').focus();
+    }
+
+    function editSource(id) {
+      const source = sources.find(s => s.id === id);
+      if (!source) return;
+      
+      editingSourceId = id;
+      document.getElementById('modal-title').textContent = '✎ Edit Lead Source';
+      document.getElementById('modal-save-btn').textContent = 'Save Changes';
+      document.getElementById('source-name').value = source.name;
+      document.getElementById('source-channel').value = source.channel;
+      document.getElementById('source-entry').value = source.entry;
+      document.getElementById('source-description').value = source.description;
+      document.getElementById('source-modal').classList.add('active');
+      document.getElementById('source-name').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('source-modal').classList.remove('active');
+      editingSourceId = null;
+      selectedSourceId = null;
+      renderSourceList();
+    }
+
+    function saveSource() {
+      const name = document.getElementById('source-name').value.trim();
+      const channel = document.getElementById('source-channel').value;
+      const entry = document.getElementById('source-entry').value;
+      const description = document.getElementById('source-description').value.trim();
+      
+      if (!name) {
+        alert('Please enter a source name');
+        return;
+      }
+      
+      if (editingSourceId) {
+        const source = sources.find(s => s.id === editingSourceId);
+        if (source) {
+          source.name = name;
+          source.channel = channel;
+          source.entry = entry;
+          source.description = description;
+        }
+      } else {
+        sources.push({
+          id: 'ls_' + Date.now(),
+          name,
+          channel,
+          entry,
+          description
+        });
+      }
+      
+      closeModal();
+      renderAll();
+      saveToStorage();
+    }
+
+    function deleteSource(id) {
+      if (!confirm('Delete this lead source?')) return;
+      sources = sources.filter(s => s.id !== id);
+      if (selectedSourceId === id) selectedSourceId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    function resetToDefaults() {
+      if (!confirm('Reset to default sources? This will replace all current sources.')) return;
+      sources = JSON.parse(JSON.stringify(DEFAULT_SOURCES));
+      selectedSourceId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    // Attribution
+    function selectAttribution(method) {
+      selectedAttribution = method;
+      document.querySelectorAll('.attribution-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.method === method);
+      });
+      renderStats(); // Update the stats display
+      saveToStorage();
+    }
+
+    // Storage
+    function saveToStorage() {
+      AuthUI.apiFetch('/api/tools/lead-sources/state', { method: 'PUT', body: JSON.stringify({
+        sources: sources,
+        attribution: selectedAttribution
+      }) });
+    }
+
+    async function loadFromStorage() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/lead-sources/state');
+        if (resp && resp.ok) {
+          const data = await resp.json();
+          // Handle both old format (array) and new format (object)
+          if (Array.isArray(data)) {
+            sources = data;
+          } else {
+            sources = data.sources || DEFAULT_SOURCES;
+            selectedAttribution = data.attribution || 'multi-touch-influence';
+          }
+          // Update attribution UI
+          document.querySelectorAll('.attribution-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.method === selectedAttribution);
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load saved sources');
+      }
+    }
+
+    // Export
+    function exportJSON() {
+      const ATTRIBUTION_LABELS = {
+        'first-touch': 'First Touch',
+        'last-touch': 'Last Touch',
+        'multi-touch-influence': 'Multi-Touch Influence',
+        'multi-touch-weighted': 'Multi-Touch Weighted'
+      };
+      const data = {
+        name: 'Lead Source Taxonomy',
+        exportedAt: new Date().toISOString(),
+        attributionMethodology: ATTRIBUTION_LABELS[selectedAttribution],
+        channels: CHANNELS,
+        sources: sources
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lead-source-taxonomy.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // Init
+    AuthUI.onLogin(async () => {
+      await loadFromStorage();
+      renderAll();
+    });
+
+    AuthUI.init();
+  </script>
+</body>
+</html>

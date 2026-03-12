@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quote-to-Cash Process Mapper</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    .layout { grid-template-columns: 380px 1fr; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+    /* Flow Selector */
+    .flow-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .flow-tab {
+      padding: 10px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .flow-tab:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+    
+    .flow-tab.active {
+      border-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+      color: var(--accent-green);
+    }
+    
+    .flow-tab .icon { font-size: 16px; }
+    
+    /* Stage List */
+    .stage-list {
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    
+    .stage-item {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--accent-blue);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .stage-item:hover {
+      background: #232a3b;
+    }
+    
+    .stage-item.active {
+      border-left-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+    }
+    
+    .stage-item.dragging {
+      opacity: 0.5;
+    }
+    
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    .stage-name {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stage-number {
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .stage-tool {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: var(--bg-input);
+      border-radius: 4px;
+      color: var(--accent-cyan);
+      margin-top: 6px;
+      display: inline-block;
+    }
+    
+    .stage-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
+    .stage-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .stage-action-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 14px;
+      opacity: 0.6;
+    }
+    
+    .stage-action-btn:hover {
+      opacity: 1;
+      background: var(--bg-input);
+    }
+    
+    .stage-action-btn.delete:hover {
+      color: var(--accent-red);
+    }
+    
+    .drag-handle {
+      cursor: grab;
+      color: var(--text-secondary);
+      opacity: 0.4;
+    }
+    
+    .drag-handle:hover { opacity: 1; }
+    
+    /* Visual Flow */
+    .flow-visual {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      min-height: 80px;
+    }
+    
+    .flow-stage-box {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      min-width: 140px;
+      transition: all 0.2s;
+    }
+    
+    .flow-stage-box:hover {
+      border-color: var(--accent-blue);
+    }
+    
+    .flow-stage-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    
+    .flow-stage-tool {
+      font-size: 10px;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .flow-arrow {
+      color: var(--text-secondary);
+      font-size: 20px;
+    }
+    
+    /* Decision Tree View */
+    .decision-tree {
+      padding: 20px;
+    }
+    
+    .tree-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .tree-branch {
+      flex: 1;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px;
+      border-top: 4px solid var(--accent-blue);
+    }
+    
+    .tree-branch.plg { border-top-color: var(--accent-green); }
+    .tree-branch.slg { border-top-color: var(--accent-blue); }
+    .tree-branch.hybrid { border-top-color: var(--accent-purple); }
+    .tree-branch.partner { border-top-color: var(--accent-orange); }
+    
+    .tree-branch-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .tree-stages {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .tree-stage {
+      background: var(--bg-card);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .tree-stage-tool {
+      font-size: 10px;
+      color: var(--accent-cyan);
+    }
+    
+    /* Summary Table */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    
+    .summary-table th {
+      text-align: left;
+      padding: 12px 10px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    
+    .summary-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    
+    .summary-table tr:hover td {
+      background: var(--bg-secondary);
+    }
+    
+    /* View Tabs */
+    .view-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    
+    .view-tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.2s;
+    }
+    
+    .view-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+    
+    .view-tab.active {
+      color: var(--accent-blue);
+      background: var(--bg-secondary);
+    }
+    
+    .view-content {
+      display: none;
+    }
+    
+    .view-content.active {
+      display: block;
+    }
+    
+    .modal { width: 520px; }
+
+    /* Flow badge */
+    .flow-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .flow-badge.plg { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+    .flow-badge.slg { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+    .flow-badge.hybrid { background: rgba(163, 113, 247, 0.2); color: var(--accent-purple); }
+    .flow-badge.partner { background: rgba(240, 136, 62, 0.2); color: var(--accent-orange); }
+    
+    /* Print overrides */
+    @media print {
+      .stage-actions { display: none !important; }
+      .layout { display: block; }
+      .layout > div:first-child { display: none; }
+      .flow-visual, .tree-branch { background: #f5f5f5; }
+      .flow-stage-box, .tree-stage { background: white; }
+      .summary-table th { background: #f0f0f0; }
+      .view-content { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>Quote to Cash</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>💰 Quote-to-Cash Process</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="resetToDefaults()">↺ Reset Defaults</button>
+      <button class="btn btn-outline" onclick="exportJSON()">📥 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <!-- Flow Type Selector -->
+  <div class="flow-tabs">
+    <div class="flow-tab active" data-flow="slg" onclick="selectFlow('slg')">
+      <span class="icon">🎯</span> Sales-Led
+    </div>
+    <div class="flow-tab" data-flow="plg" onclick="selectFlow('plg')">
+      <span class="icon">🚀</span> Product-Led
+    </div>
+    <div class="flow-tab" data-flow="hybrid" onclick="selectFlow('hybrid')">
+      <span class="icon">🔀</span> Hybrid
+    </div>
+    <div class="flow-tab" data-flow="partner" onclick="selectFlow('partner')">
+      <span class="icon">🤝</span> Partnerships
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left: Stage List -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Process Stages</span>
+          <button class="btn btn-sm btn-green" onclick="openAddModal()">+ Add Stage</button>
+        </div>
+        <div class="stage-list" id="stage-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Visualizations -->
+    <div>
+      <div class="card">
+        <div class="view-tabs">
+          <button class="view-tab active" onclick="switchView('flow')">🔄 Flow View</button>
+          <button class="view-tab" onclick="switchView('tree')">🌳 All Flows Comparison</button>
+          <button class="view-tab" onclick="switchView('table')">📋 Table View</button>
+        </div>
+        
+        <div class="view-content active" id="view-flow">
+          <div class="flow-visual" id="flow-visual">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        
+        <div class="view-content" id="view-tree">
+          <div class="decision-tree" id="decision-tree">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        
+        <div class="view-content" id="view-table">
+          <div style="max-height:60vh;overflow-y:auto;">
+            <table class="summary-table" id="summary-table">
+              <!-- Populated by JS -->
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Stage Modal -->
+  <div class="modal-overlay" id="stage-modal">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">➕ Add Stage</div>
+      
+      <div class="input-group">
+        <label class="input-label">Stage Name</label>
+        <input type="text" class="input-field" id="stage-name" placeholder="e.g., Quote Generation, Contract Signing">
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Tool / System</label>
+        <input type="text" class="input-field" id="stage-tool" placeholder="e.g., Salesforce CPQ, DocuSign, Stripe">
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Description</label>
+        <textarea class="input-field" id="stage-description" placeholder="Describe what happens at this stage..."></textarea>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Applies to Flows</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="flow-slg" checked> <span class="flow-badge slg">Sales-Led</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="flow-plg"> <span class="flow-badge plg">Product-Led</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="flow-hybrid"> <span class="flow-badge hybrid">Hybrid</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="flow-partner"> <span class="flow-badge partner">Partnerships</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-green" id="modal-save-btn" onclick="saveStage()">Add Stage</button>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- end app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    // Flow configurations
+    const FLOWS = {
+      slg: { name: 'Sales-Led', icon: '🎯', color: 'slg' },
+      plg: { name: 'Product-Led', icon: '🚀', color: 'plg' },
+      hybrid: { name: 'Hybrid', icon: '🔀', color: 'hybrid' },
+      partner: { name: 'Partnerships', icon: '🤝', color: 'partner' }
+    };
+
+    // Default stages
+    const DEFAULT_STAGES = [
+      // Common stages
+      { id: 'q1', name: 'Opportunity Created', tool: 'Salesforce CRM', description: 'Sales opportunity is created and qualified. Deal enters the pipeline.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q2', name: 'Quote Generation', tool: 'Salesforce CPQ', description: 'Configure pricing, products, and generate formal quote document.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q3', name: 'Quote Approval', tool: 'Salesforce CPQ', description: 'Internal approval workflow for discounts, non-standard terms, or deal desk review.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q4', name: 'Proposal Delivery', tool: 'PandaDoc / DocuSign', description: 'Send proposal/quote to customer for review.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q5', name: 'Negotiation', tool: 'Salesforce CRM', description: 'Handle customer questions, negotiate terms and pricing.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q6', name: 'Contract Generation', tool: 'DocuSign CLM', description: 'Generate final contract with agreed terms and legal language.', flows: ['slg', 'hybrid', 'partner'] },
+      { id: 'q7', name: 'Contract Signing', tool: 'DocuSign', description: 'Electronic signature capture from all parties.', flows: ['slg', 'plg', 'hybrid', 'partner'] },
+      { id: 'q8', name: 'Order Processing', tool: 'Salesforce / ERP', description: 'Convert signed contract to order. Provision services or products.', flows: ['slg', 'plg', 'hybrid', 'partner'] },
+      { id: 'q9', name: 'Invoicing', tool: 'Stripe / NetSuite', description: 'Generate and send invoice to customer based on contract terms.', flows: ['slg', 'plg', 'hybrid', 'partner'] },
+      { id: 'q10', name: 'Payment Collection', tool: 'Stripe / Bank', description: 'Collect payment via credit card, ACH, or wire transfer.', flows: ['slg', 'plg', 'hybrid', 'partner'] },
+      { id: 'q11', name: 'Revenue Recognition', tool: 'NetSuite / ERP', description: 'Recognize revenue according to ASC 606 guidelines.', flows: ['slg', 'plg', 'hybrid', 'partner'] },
+      
+      // PLG-specific stages
+      { id: 'p1', name: 'Self-Service Signup', tool: 'Product / Auth0', description: 'User signs up for free trial or freemium tier through the product.', flows: ['plg', 'hybrid'] },
+      { id: 'p2', name: 'Usage & Activation', tool: 'Product Analytics', description: 'User engages with product, hits activation milestones.', flows: ['plg', 'hybrid'] },
+      { id: 'p3', name: 'Upgrade Trigger', tool: 'Product / Pendo', description: 'User hits paywall, usage limit, or requests premium features.', flows: ['plg', 'hybrid'] },
+      { id: 'p4', name: 'Self-Service Checkout', tool: 'Stripe Checkout', description: 'User completes purchase through in-app checkout flow.', flows: ['plg'] },
+      
+      // Partner-specific
+      { id: 'r1', name: 'Partner Deal Registration', tool: 'Partner Portal', description: 'Partner registers deal for protection and commission tracking.', flows: ['partner'] },
+      { id: 'r2', name: 'Partner Quote', tool: 'Partner Portal / CPQ', description: 'Generate partner-specific pricing with appropriate discounts.', flows: ['partner'] },
+      { id: 'r3', name: 'Partner Commission', tool: 'Partner Portal / ERP', description: 'Calculate and process partner commission on closed deal.', flows: ['partner'] },
+    ];
+
+    let stages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+    let currentFlow = 'slg';
+    let selectedStageId = null;
+    let editingStageId = null;
+
+    function getFlowStages(flowId) {
+      return stages.filter(s => s.flows.includes(flowId));
+    }
+
+    function selectFlow(flowId) {
+      currentFlow = flowId;
+      document.querySelectorAll('.flow-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.flow === flowId);
+      });
+      renderAll();
+    }
+
+    function renderStageList() {
+      const container = document.getElementById('stage-list');
+      const flowStages = getFlowStages(currentFlow);
+      
+      if (flowStages.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No stages for this flow. Click "+ Add Stage" to begin.</div>';
+        return;
+      }
+      
+      container.innerHTML = flowStages.map((stage, idx) => `
+        <div class="stage-item ${selectedStageId === stage.id ? 'active' : ''}" 
+             data-id="${stage.id}"
+             draggable="true"
+             onclick="selectStage('${stage.id}')"
+             ondragstart="handleDragStart(event)"
+             ondragover="handleDragOver(event)"
+             ondrop="handleDrop(event)"
+             ondragend="handleDragEnd(event)">
+          <div class="stage-header">
+            <span class="stage-name">
+              <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+              <span class="stage-number">${idx + 1}</span>
+              ${stage.name}
+            </span>
+            <div class="stage-actions">
+              <button class="stage-action-btn" onclick="event.stopPropagation(); editStage('${stage.id}')" title="Edit">✎</button>
+              <button class="stage-action-btn delete" onclick="event.stopPropagation(); deleteStage('${stage.id}')" title="Delete">✕</button>
+            </div>
+          </div>
+          <div class="stage-tool">🔧 ${stage.tool}</div>
+          <div class="stage-description">${stage.description}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderFlowVisual() {
+      const container = document.getElementById('flow-visual');
+      const flowStages = getFlowStages(currentFlow);
+      
+      if (flowStages.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;width:100%;">Add stages to see the flow</div>';
+        return;
+      }
+      
+      container.innerHTML = flowStages.map((stage, idx) => `
+        <div class="flow-stage-box" onclick="selectStage('${stage.id}')">
+          <div class="flow-stage-name">${stage.name}</div>
+          <div class="flow-stage-tool">🔧 ${stage.tool}</div>
+        </div>
+        ${idx < flowStages.length - 1 ? '<span class="flow-arrow">→</span>' : ''}
+      `).join('');
+    }
+
+    function renderDecisionTree() {
+      const container = document.getElementById('decision-tree');
+      
+      container.innerHTML = `
+        <div class="tree-row">
+          ${Object.entries(FLOWS).map(([flowId, flow]) => {
+            const flowStages = getFlowStages(flowId);
+            return `
+              <div class="tree-branch ${flow.color}">
+                <div class="tree-branch-title">
+                  <span>${flow.icon}</span>
+                  <span>${flow.name}</span>
+                  <span style="font-size:11px;color:var(--text-secondary);font-weight:400;margin-left:auto;">${flowStages.length} stages</span>
+                </div>
+                <div class="tree-stages">
+                  ${flowStages.length > 0 ? flowStages.map(stage => `
+                    <div class="tree-stage">
+                      <span>${stage.name}</span>
+                      <span class="tree-stage-tool">${stage.tool}</span>
+                    </div>
+                  `).join('') : '<div style="color:var(--text-secondary);font-size:12px;padding:10px;">No stages defined</div>'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderSummaryTable() {
+      const table = document.getElementById('summary-table');
+      const flowStages = getFlowStages(currentFlow);
+      
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Stage</th>
+            <th>Tool</th>
+            <th>Description</th>
+            <th>Flows</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${flowStages.map((stage, idx) => `
+            <tr onclick="selectStage('${stage.id}')" style="cursor:pointer;">
+              <td style="text-align:center;color:var(--text-secondary);">${idx + 1}</td>
+              <td style="font-weight:600;">${stage.name}</td>
+              <td><span style="color:var(--accent-cyan);font-size:11px;">${stage.tool}</span></td>
+              <td style="color:var(--text-secondary);font-size:11px;max-width:300px;">${stage.description}</td>
+              <td>${stage.flows.map(f => `<span class="flow-badge ${f}" style="margin-right:4px;">${FLOWS[f]?.name || f}</span>`).join('')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+    }
+
+    function renderAll() {
+      renderStageList();
+      renderFlowVisual();
+      renderDecisionTree();
+      renderSummaryTable();
+    }
+
+    function selectStage(id) {
+      selectedStageId = selectedStageId === id ? null : id;
+      renderStageList();
+      if (selectedStageId) editStage(id);
+    }
+
+    function switchView(view) {
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.view-tab[onclick*="${view}"]`).classList.add('active');
+      document.getElementById('view-' + view).classList.add('active');
+    }
+
+    function openAddModal() {
+      editingStageId = null;
+      document.getElementById('modal-title').textContent = '➕ Add Stage';
+      document.getElementById('modal-save-btn').textContent = 'Add Stage';
+      document.getElementById('stage-name').value = '';
+      document.getElementById('stage-tool').value = '';
+      document.getElementById('stage-description').value = '';
+      // Default to current flow
+      document.getElementById('flow-slg').checked = currentFlow === 'slg';
+      document.getElementById('flow-plg').checked = currentFlow === 'plg';
+      document.getElementById('flow-hybrid').checked = currentFlow === 'hybrid';
+      document.getElementById('flow-partner').checked = currentFlow === 'partner';
+      document.getElementById('stage-modal').classList.add('active');
+      document.getElementById('stage-name').focus();
+    }
+
+    function editStage(id) {
+      const stage = stages.find(s => s.id === id);
+      if (!stage) return;
+      
+      editingStageId = id;
+      document.getElementById('modal-title').textContent = '✎ Edit Stage';
+      document.getElementById('modal-save-btn').textContent = 'Save Changes';
+      document.getElementById('stage-name').value = stage.name;
+      document.getElementById('stage-tool').value = stage.tool;
+      document.getElementById('stage-description').value = stage.description;
+      document.getElementById('flow-slg').checked = stage.flows.includes('slg');
+      document.getElementById('flow-plg').checked = stage.flows.includes('plg');
+      document.getElementById('flow-hybrid').checked = stage.flows.includes('hybrid');
+      document.getElementById('flow-partner').checked = stage.flows.includes('partner');
+      document.getElementById('stage-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('stage-modal').classList.remove('active');
+      editingStageId = null;
+      selectedStageId = null;
+      renderStageList();
+    }
+
+    function saveStage() {
+      const name = document.getElementById('stage-name').value.trim();
+      const tool = document.getElementById('stage-tool').value.trim();
+      const description = document.getElementById('stage-description').value.trim();
+      
+      const flows = [];
+      if (document.getElementById('flow-slg').checked) flows.push('slg');
+      if (document.getElementById('flow-plg').checked) flows.push('plg');
+      if (document.getElementById('flow-hybrid').checked) flows.push('hybrid');
+      if (document.getElementById('flow-partner').checked) flows.push('partner');
+      
+      if (!name) {
+        alert('Please enter a stage name');
+        return;
+      }
+      
+      if (flows.length === 0) {
+        alert('Please select at least one flow');
+        return;
+      }
+      
+      if (editingStageId) {
+        const stage = stages.find(s => s.id === editingStageId);
+        if (stage) {
+          stage.name = name;
+          stage.tool = tool;
+          stage.description = description;
+          stage.flows = flows;
+        }
+      } else {
+        stages.push({
+          id: 'q_' + Date.now(),
+          name,
+          tool,
+          description,
+          flows
+        });
+      }
+      
+      closeModal();
+      renderAll();
+      saveToStorage();
+    }
+
+    function deleteStage(id) {
+      if (!confirm('Delete this stage?')) return;
+      stages = stages.filter(s => s.id !== id);
+      if (selectedStageId === id) selectedStageId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    function resetToDefaults() {
+      if (!confirm('Reset to default stages? This will replace all current stages.')) return;
+      stages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+      selectedStageId = null;
+      renderAll();
+      saveToStorage();
+    }
+
+    // Drag and drop
+    let draggedItem = null;
+    
+    function handleDragStart(e) {
+      draggedItem = e.target.closest('.stage-item');
+      draggedItem.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      const target = e.target.closest('.stage-item');
+      if (target && target !== draggedItem) {
+        const rect = target.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        target.style.borderTop = e.clientY < midY ? '2px solid var(--accent-green)' : '';
+        target.style.borderBottom = e.clientY >= midY ? '2px solid var(--accent-green)' : '';
+      }
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const target = e.target.closest('.stage-item');
+      if (!target || target === draggedItem) return;
+      
+      const draggedId = draggedItem.dataset.id;
+      const targetId = target.dataset.id;
+      
+      // Get flow-specific indices
+      const flowStages = getFlowStages(currentFlow);
+      const allIds = stages.map(s => s.id);
+      
+      const draggedIdx = allIds.indexOf(draggedId);
+      const targetIdx = allIds.indexOf(targetId);
+      
+      const [removed] = stages.splice(draggedIdx, 1);
+      const rect = target.getBoundingClientRect();
+      const insertIdx = e.clientY < rect.top + rect.height / 2 ? targetIdx : targetIdx + 1;
+      stages.splice(insertIdx > draggedIdx ? insertIdx - 1 : insertIdx, 0, removed);
+      
+      renderAll();
+      saveToStorage();
+    }
+
+    function handleDragEnd(e) {
+      document.querySelectorAll('.stage-item').forEach(item => {
+        item.classList.remove('dragging');
+        item.style.borderTop = '';
+        item.style.borderBottom = '';
+      });
+      draggedItem = null;
+    }
+
+    // Storage
+    function saveToStorage() {
+      AuthUI.apiFetch('/api/tools/quote-to-cash/state', { method: 'PUT', body: JSON.stringify({ stages, currentFlow }) });
+    }
+
+    async function loadFromStorage() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/quote-to-cash/state');
+        if (resp && resp.ok) {
+          const data = await resp.json();
+          if (data && data.stages) {
+            stages = data.stages;
+          }
+          if (data && data.currentFlow) {
+            currentFlow = data.currentFlow;
+            document.querySelectorAll('.flow-tab').forEach(tab => {
+              tab.classList.toggle('active', tab.dataset.flow === currentFlow);
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load saved data', e);
+      }
+    }
+
+    // Export
+    function exportJSON() {
+      const data = {
+        name: 'Quote-to-Cash Process',
+        exportedAt: new Date().toISOString(),
+        flows: FLOWS,
+        stages: stages
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quote-to-cash-process.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // Init
+    AuthUI.onLogin(async () => {
+      await loadFromStorage();
+      renderAll();
+    });
+
+    AuthUI.init();
+  </script>
+</body>
+</html>

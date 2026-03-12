@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing Channel Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/lib/theme.css">
+  <style>
+    /* Page-specific: layout override */
+    .layout { grid-template-columns: 420px 1fr; }
+
+    /* Channel cards */
+    .channel-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .channel-card {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent-blue);
+    }
+
+    .channel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .channel-name {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .channel-delete {
+      background: none;
+      border: none;
+      color: var(--accent-red);
+      cursor: pointer;
+      opacity: 0.7;
+      font-size: 16px;
+    }
+
+    .channel-delete:hover { opacity: 1; }
+
+    .channel-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .channel-stat {
+      text-align: center;
+    }
+
+    .channel-stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .channel-stat-label {
+      font-size: 9px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .quarter-budgets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .quarter-budget {
+      background: var(--bg-input);
+      padding: 6px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 11px;
+    }
+
+    .quarter-budget span {
+      color: var(--text-secondary);
+      display: block;
+      font-size: 9px;
+    }
+
+    /* Summary */
+    .summary-section {
+      margin-bottom: 20px;
+    }
+
+    .summary-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-purple);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .ratio-hint {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .channel-breakdown {
+      margin-top: 20px;
+    }
+
+    .channel-breakdown-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .input-row-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .data-table .quarter-row td {
+      background: rgba(163, 113, 247, 0.1);
+      font-weight: 600;
+      border-top: 2px solid var(--accent-purple);
+    }
+
+    .data-table .quarter-row td:first-child {
+      background: rgba(163, 113, 247, 0.1);
+      color: var(--accent-purple);
+    }
+
+    .modal { width: 500px; }
+  </style>
+</head>
+<body>
+  <!-- Login Gate -->
+  <div id="login-container">
+    <div class="login-box">
+      <h2>Marketing Channel Planner</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required>
+        <input id="login-password" type="password" placeholder="Password" required>
+        <button type="submit" class="login-submit">Sign In</button>
+        <button type="button" id="magic-link-btn" class="login-magic">Send Magic Link</button>
+        <p id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-container" style="display:none;">
+  <div class="header">
+    <h1>📣 Marketing Channel Planner</h1>
+    <div class="header-actions">
+      <button class="btn" onclick="calculate()">📊 Calculate</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left Panel -->
+    <div>
+      <!-- Global Settings -->
+      <div class="card">
+        <div class="card-title">⚙️ Plan Settings</div>
+        <div class="input-row">
+          <div class="input-group">
+            <label class="input-label">Plan Start Year</label>
+            <input type="number" class="input-field" id="startYear" value="2026">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Plan Duration</label>
+            <select class="input-field" id="duration">
+              <option value="4">4 Quarters (1 Year)</option>
+              <option value="8" selected>8 Quarters (2 Years)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Funnel Conversion Settings -->
+      <div class="card">
+        <div class="card-title">🎯 Funnel Settings</div>
+        <div class="input-group">
+          <label class="input-label">Average ACV ($)</label>
+          <input type="text" class="input-field" id="avgACV" value="75000" placeholder="75000">
+          <div class="ratio-hint">Used to convert pipeline $ to SQL count</div>
+        </div>
+        <div class="input-row" style="margin-top:12px;">
+          <div class="input-group">
+            <label class="input-label">MQL → SQL Rate (%)</label>
+            <input type="text" class="input-field" id="mqlToSql" value="25" placeholder="25">
+            <div class="ratio-hint">Typical: 15-30%</div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">SQL → CW Rate (%)</label>
+            <input type="text" class="input-field" id="sqlToCw" value="20" placeholder="20">
+            <div class="ratio-hint">Typical: 15-25%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channels -->
+      <div class="card">
+        <div class="card-title">
+          <span>📢 Marketing Channels</span>
+          <button class="btn btn-sm btn-green" onclick="openChannelModal()">+ Add Channel</button>
+        </div>
+        <div class="channel-list" id="channel-list">
+          <div class="muted" style="text-align:center;padding:20px;">No channels added yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="card">
+      <div class="card-title">📈 Pipeline Forecast</div>
+
+      <!-- Company Summary -->
+      <div class="summary-section">
+        <div class="summary-title">🏢 Total Investment & Pipeline</div>
+        <div style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:8px;align-items:center;">
+          <div></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Budget</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Pipeline</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">SQLs</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">MQLs Needed</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">Exp. Bookings</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">CW Deals</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-secondary);text-transform:uppercase;">ROI</div>
+
+          <div style="font-size:11px;color:var(--text-secondary);">Year 1</div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-budget-y1">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value positive" style="font-size:16px;" id="sum-pipeline-y1">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-sqls-y1">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-mqls-y1">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-bookings-y1">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-deals-y1">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-roi-y1">0x</div></div>
+
+          <div style="font-size:11px;color:var(--text-secondary);">Year 2</div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-budget-y2">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value positive" style="font-size:16px;" id="sum-pipeline-y2">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-sqls-y2">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-mqls-y2">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-bookings-y2">$0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-deals-y2">0</div></div>
+          <div class="summary-card" style="padding:8px;"><div class="summary-value" style="font-size:16px;" id="sum-roi-y2">0x</div></div>
+
+          <div style="font-size:11px;font-weight:600;color:var(--accent-green);">Total</div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-budget-total">$0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value positive" style="font-size:16px;" id="sum-pipeline-total">$0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-sqls-total">0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-mqls-total">0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-bookings-total">$0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-deals-total">0</div></div>
+          <div class="summary-card" style="padding:8px;background:rgba(63,185,80,0.1);"><div class="summary-value" style="font-size:16px;" id="sum-roi-total">0x</div></div>
+        </div>
+      </div>
+
+      <!-- Per Channel Breakdown -->
+      <div class="channel-breakdown" id="channel-summaries"></div>
+
+      <!-- Monthly Table -->
+      <div style="margin-top:20px;">
+        <div class="channel-breakdown-title">📅 Quarterly Breakdown</div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Quarter</th>
+                <th>Budget</th>
+                <th>Pipeline</th>
+                <th>SQLs</th>
+                <th>MQLs</th>
+                <th>Exp. Bookings</th>
+                <th>CW Deals</th>
+                <th>ROI</th>
+              </tr>
+            </thead>
+            <tbody id="quarterly-body">
+              <tr><td colspan="8" class="muted" style="text-align:center">Add channels to see forecast</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Channel Modal -->
+  <div class="modal-overlay" id="channel-modal">
+    <div class="modal">
+      <div class="modal-title">Add Marketing Channel</div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label class="input-label">Channel Name</label>
+          <input type="text" class="input-field" id="ch-name" placeholder="Paid Search">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Pipeline per $ Spent</label>
+          <input type="text" class="input-field" id="ch-ratio" value="5" placeholder="5">
+          <div class="ratio-hint">e.g., 5 = $5 pipeline for every $1 spent</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label class="input-label">Quarterly Budget Allocation</label>
+        <div id="quarter-inputs" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeChannelModal()">Cancel</button>
+        <button class="btn btn-green" onclick="addChannel()">Add Channel</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end app-container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/lib/env.js"></script>
+  <script src="/lib/auth-client.js"></script>
+  <script src="/lib/nav.js"></script>
+  <script>
+    let channels = [];
+    const CHANNEL_COLORS = ['blue', 'green', 'purple', 'orange', 'cyan', 'pink', 'yellow', 'red'];
+
+    function parseNum(str) {
+      return parseFloat(String(str).replace(/[,$%x]/g, '')) || 0;
+    }
+
+    function formatCurrency(n) {
+      if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+      return '$' + n.toFixed(0);
+    }
+
+    function getQuarters() {
+      const startYear = parseInt(document.getElementById('startYear').value);
+      const duration = parseInt(document.getElementById('duration').value);
+      const quarters = [];
+      for (let i = 0; i < duration; i++) {
+        const year = startYear + Math.floor(i / 4);
+        const q = (i % 4) + 1;
+        quarters.push({ label: `Q${q} ${year}`, year, q, index: i });
+      }
+      return quarters;
+    }
+
+    function openChannelModal() {
+      document.getElementById('ch-name').value = '';
+      document.getElementById('ch-ratio').value = '5';
+
+      const quarters = getQuarters();
+      const container = document.getElementById('quarter-inputs');
+      container.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          ${quarters.map(q => `
+            <div class="input-group" style="margin-bottom:8px;">
+              <label class="input-label">${q.label}</label>
+              <input type="text" class="input-field" id="ch-q${q.index}" value="0" placeholder="0">
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      document.getElementById('channel-modal').classList.add('active');
+    }
+
+    function closeChannelModal() {
+      document.getElementById('channel-modal').classList.remove('active');
+    }
+
+    function addChannel() {
+      const name = document.getElementById('ch-name').value.trim() || 'Channel ' + (channels.length + 1);
+      const ratio = parseNum(document.getElementById('ch-ratio').value);
+      const quarters = getQuarters();
+      const budgets = {};
+
+      quarters.forEach(q => {
+        budgets[q.index] = parseNum(document.getElementById(`ch-q${q.index}`).value);
+      });
+
+      const color = CHANNEL_COLORS[channels.length % CHANNEL_COLORS.length];
+      channels.push({ id: 'ch_' + Date.now(), name, ratio, budgets, color });
+
+      renderChannels();
+      closeChannelModal();
+      calculate();
+      saveToStorage();
+    }
+
+    function deleteChannel(id) {
+      channels = channels.filter(c => c.id !== id);
+      renderChannels();
+      calculate();
+      saveToStorage();
+    }
+
+    function renderChannels() {
+      const container = document.getElementById('channel-list');
+      if (channels.length === 0) {
+        container.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">No channels added yet</div>';
+        return;
+      }
+
+      const quarters = getQuarters();
+
+      container.innerHTML = channels.map(ch => {
+        const totalBudget = Object.values(ch.budgets).reduce((s, b) => s + b, 0);
+        const totalPipeline = totalBudget * ch.ratio;
+
+        return `
+          <div class="channel-card" style="border-left-color: var(--accent-${ch.color})">
+            <div class="channel-header">
+              <span class="channel-name">
+                <span class="color-dot" style="background:var(--accent-${ch.color})"></span>
+                ${ch.name}
+              </span>
+              <button class="channel-delete" onclick="deleteChannel('${ch.id}')">✕</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-secondary);">
+              Pipeline Ratio: <strong>${ch.ratio}x</strong> ($${ch.ratio} pipeline per $1 spent)
+            </div>
+            <div class="channel-stats">
+              <div class="channel-stat">
+                <div class="channel-stat-value">${formatCurrency(totalBudget)}</div>
+                <div class="channel-stat-label">Total Budget</div>
+              </div>
+              <div class="channel-stat">
+                <div class="channel-stat-value positive">${formatCurrency(totalPipeline)}</div>
+                <div class="channel-stat-label">Expected Pipeline</div>
+              </div>
+              <div class="channel-stat">
+                <div class="channel-stat-value">${ch.ratio}x</div>
+                <div class="channel-stat-label">ROI</div>
+              </div>
+            </div>
+            <div class="quarter-budgets">
+              ${quarters.slice(0, 8).map(q => `
+                <div class="quarter-budget">
+                  <span>${q.label}</span>
+                  ${formatCurrency(ch.budgets[q.index] || 0)}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function calculate() {
+      const quarters = getQuarters();
+      const startYear = parseInt(document.getElementById('startYear').value);
+
+      const quarterData = quarters.map(q => {
+        let budget = 0;
+        let pipeline = 0;
+
+        channels.forEach(ch => {
+          const qBudget = ch.budgets[q.index] || 0;
+          budget += qBudget;
+          pipeline += qBudget * ch.ratio;
+        });
+
+        return { ...q, budget, pipeline, roi: budget > 0 ? pipeline / budget : 0 };
+      });
+
+      let cumBudget = 0, cumPipeline = 0;
+      quarterData.forEach(q => {
+        cumBudget += q.budget;
+        cumPipeline += q.pipeline;
+        q.cumBudget = cumBudget;
+        q.cumPipeline = cumPipeline;
+      });
+
+      const y1Data = quarterData.filter(q => q.year === startYear);
+      const y2Data = quarterData.filter(q => q.year === startYear + 1);
+
+      const y1Budget = y1Data.reduce((s, q) => s + q.budget, 0);
+      const y1Pipeline = y1Data.reduce((s, q) => s + q.pipeline, 0);
+      const y2Budget = y2Data.reduce((s, q) => s + q.budget, 0);
+      const y2Pipeline = y2Data.reduce((s, q) => s + q.pipeline, 0);
+      const totalBudget = y1Budget + y2Budget;
+      const totalPipeline = y1Pipeline + y2Pipeline;
+
+      const avgACV = parseNum(document.getElementById('avgACV').value) || 75000;
+      const mqlToSqlRate = (parseNum(document.getElementById('mqlToSql').value) || 25) / 100;
+      const sqlToCwRate = (parseNum(document.getElementById('sqlToCw').value) || 20) / 100;
+
+      const calcFunnel = (pipeline) => {
+        const sqls = avgACV > 0 ? pipeline / avgACV : 0;
+        const mqls = mqlToSqlRate > 0 ? sqls / mqlToSqlRate : 0;
+        const bookings = pipeline * sqlToCwRate;
+        const deals = avgACV > 0 ? bookings / avgACV : 0;
+        return { sqls, mqls, bookings, deals };
+      };
+
+      const y1Funnel = calcFunnel(y1Pipeline);
+      const y2Funnel = calcFunnel(y2Pipeline);
+      const totalFunnel = calcFunnel(totalPipeline);
+
+      document.getElementById('sum-budget-y1').textContent = formatCurrency(y1Budget);
+      document.getElementById('sum-pipeline-y1').textContent = formatCurrency(y1Pipeline);
+      document.getElementById('sum-sqls-y1').textContent = Math.round(y1Funnel.sqls).toLocaleString();
+      document.getElementById('sum-mqls-y1').textContent = Math.round(y1Funnel.mqls).toLocaleString();
+      document.getElementById('sum-bookings-y1').textContent = formatCurrency(y1Funnel.bookings);
+      document.getElementById('sum-deals-y1').textContent = y1Funnel.deals.toFixed(1);
+      document.getElementById('sum-roi-y1').textContent = y1Budget > 0 ? (y1Pipeline / y1Budget).toFixed(1) + 'x' : '0x';
+
+      document.getElementById('sum-budget-y2').textContent = formatCurrency(y2Budget);
+      document.getElementById('sum-pipeline-y2').textContent = formatCurrency(y2Pipeline);
+      document.getElementById('sum-sqls-y2').textContent = Math.round(y2Funnel.sqls).toLocaleString();
+      document.getElementById('sum-mqls-y2').textContent = Math.round(y2Funnel.mqls).toLocaleString();
+      document.getElementById('sum-bookings-y2').textContent = formatCurrency(y2Funnel.bookings);
+      document.getElementById('sum-deals-y2').textContent = y2Funnel.deals.toFixed(1);
+      document.getElementById('sum-roi-y2').textContent = y2Budget > 0 ? (y2Pipeline / y2Budget).toFixed(1) + 'x' : '0x';
+
+      document.getElementById('sum-budget-total').textContent = formatCurrency(totalBudget);
+      document.getElementById('sum-pipeline-total').textContent = formatCurrency(totalPipeline);
+      document.getElementById('sum-sqls-total').textContent = Math.round(totalFunnel.sqls).toLocaleString();
+      document.getElementById('sum-mqls-total').textContent = Math.round(totalFunnel.mqls).toLocaleString();
+      document.getElementById('sum-bookings-total').textContent = formatCurrency(totalFunnel.bookings);
+      document.getElementById('sum-deals-total').textContent = totalFunnel.deals.toFixed(1);
+      document.getElementById('sum-roi-total').textContent = totalBudget > 0 ? (totalPipeline / totalBudget).toFixed(1) + 'x' : '0x';
+
+      // Per-channel summaries
+      let chHtml = '';
+      if (channels.length > 0) {
+        chHtml = '<div class="channel-breakdown-title">📢 By Channel</div>';
+        chHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">';
+        channels.forEach(ch => {
+          const chBudget = Object.values(ch.budgets).reduce((s, b) => s + b, 0);
+          const chPipeline = chBudget * ch.ratio;
+          chHtml += `
+            <div class="summary-card" style="border-left:4px solid var(--accent-${ch.color});text-align:left;padding:14px;">
+              <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                <span class="color-dot" style="background:var(--accent-${ch.color})"></span>
+                ${ch.name}
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+                <div><span style="color:var(--text-secondary)">Budget:</span> ${formatCurrency(chBudget)}</div>
+                <div><span style="color:var(--text-secondary)">Pipeline:</span> <span class="positive">${formatCurrency(chPipeline)}</span></div>
+                <div><span style="color:var(--text-secondary)">ROI:</span> ${ch.ratio}x</div>
+                <div><span style="color:var(--text-secondary)">% of Total:</span> ${totalBudget > 0 ? ((chBudget / totalBudget) * 100).toFixed(0) : 0}%</div>
+              </div>
+            </div>
+          `;
+        });
+        chHtml += '</div>';
+      }
+      document.getElementById('channel-summaries').innerHTML = chHtml;
+
+      // Quarterly table
+      let tableHtml = '';
+      let prevYear = null;
+
+      quarterData.forEach((q, i) => {
+        const qFunnel = calcFunnel(q.pipeline);
+
+        if (prevYear && prevYear !== q.year) {
+          const yearData = quarterData.filter(qd => qd.year === prevYear);
+          const yearBudget = yearData.reduce((s, qd) => s + qd.budget, 0);
+          const yearPipeline = yearData.reduce((s, qd) => s + qd.pipeline, 0);
+          const yearFunnel = calcFunnel(yearPipeline);
+          tableHtml += `<tr class="quarter-row">
+            <td>${prevYear} Total</td>
+            <td>${formatCurrency(yearBudget)}</td>
+            <td class="positive">${formatCurrency(yearPipeline)}</td>
+            <td>${Math.round(yearFunnel.sqls)}</td>
+            <td>${Math.round(yearFunnel.mqls)}</td>
+            <td>${formatCurrency(yearFunnel.bookings)}</td>
+            <td>${yearFunnel.deals.toFixed(1)}</td>
+            <td>${yearBudget > 0 ? (yearPipeline / yearBudget).toFixed(1) + 'x' : '-'}</td>
+          </tr>`;
+        }
+        prevYear = q.year;
+
+        tableHtml += `<tr>
+          <td>${q.label}</td>
+          <td>${formatCurrency(q.budget)}</td>
+          <td class="positive">${formatCurrency(q.pipeline)}</td>
+          <td>${Math.round(qFunnel.sqls)}</td>
+          <td>${Math.round(qFunnel.mqls)}</td>
+          <td>${formatCurrency(qFunnel.bookings)}</td>
+          <td>${qFunnel.deals.toFixed(1)}</td>
+          <td>${q.budget > 0 ? q.roi.toFixed(1) + 'x' : '-'}</td>
+        </tr>`;
+
+        if (i === quarterData.length - 1) {
+          const yearData = quarterData.filter(qd => qd.year === q.year);
+          const yearBudget = yearData.reduce((s, qd) => s + qd.budget, 0);
+          const yearPipeline = yearData.reduce((s, qd) => s + qd.pipeline, 0);
+          const yearFunnel = calcFunnel(yearPipeline);
+          tableHtml += `<tr class="quarter-row">
+            <td>${q.year} Total</td>
+            <td>${formatCurrency(yearBudget)}</td>
+            <td class="positive">${formatCurrency(yearPipeline)}</td>
+            <td>${Math.round(yearFunnel.sqls)}</td>
+            <td>${Math.round(yearFunnel.mqls)}</td>
+            <td>${formatCurrency(yearFunnel.bookings)}</td>
+            <td>${yearFunnel.deals.toFixed(1)}</td>
+            <td>${yearBudget > 0 ? (yearPipeline / yearBudget).toFixed(1) + 'x' : '-'}</td>
+          </tr>`;
+        }
+      });
+
+      document.getElementById('quarterly-body').innerHTML = tableHtml || '<tr><td colspan="8" class="muted">Add channels to see forecast</td></tr>';
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // Update quarters when duration changes
+    document.getElementById('duration').addEventListener('change', () => {
+      const quarters = getQuarters();
+      channels.forEach(ch => {
+        quarters.forEach(q => {
+          if (ch.budgets[q.index] === undefined) {
+            ch.budgets[q.index] = 0;
+          }
+        });
+      });
+      renderChannels();
+      calculate();
+      saveToStorage();
+    });
+
+    document.getElementById('startYear').addEventListener('change', () => {
+      renderChannels();
+      calculate();
+      saveToStorage();
+    });
+
+    // Recalculate when funnel settings change
+    document.getElementById('avgACV').addEventListener('input', () => { calculate(); saveToStorage(); });
+    document.getElementById('mqlToSql').addEventListener('input', () => { calculate(); saveToStorage(); });
+    document.getElementById('sqlToCw').addEventListener('input', () => { calculate(); saveToStorage(); });
+
+    // ── State Persistence ──
+    async function saveToStorage() {
+      try {
+        const data = {
+          channels: channels,
+          startYear: document.getElementById('startYear').value,
+          duration: document.getElementById('duration').value,
+          avgACV: document.getElementById('avgACV').value,
+          mqlToSql: document.getElementById('mqlToSql').value,
+          sqlToCw: document.getElementById('sqlToCw').value
+        };
+        await AuthUI.apiFetch('/api/tools/marketing-plan/state', {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      } catch (e) { console.warn('Save failed:', e); }
+    }
+
+    async function loadFromStorage() {
+      try {
+        const resp = await AuthUI.apiFetch('/api/tools/marketing-plan/state');
+        if (!resp.ok) return false;
+        const json = await resp.json();
+        const data = json.state || json;
+        if (!data.channels) return false;
+
+        channels = data.channels || [];
+        if (data.startYear) document.getElementById('startYear').value = data.startYear;
+        if (data.duration) document.getElementById('duration').value = data.duration;
+        if (data.avgACV) document.getElementById('avgACV').value = data.avgACV;
+        if (data.mqlToSql) document.getElementById('mqlToSql').value = data.mqlToSql;
+        if (data.sqlToCw) document.getElementById('sqlToCw').value = data.sqlToCw;
+
+        renderChannels();
+        if (channels.length > 0) calculate();
+        return true;
+      } catch (e) { console.warn('Load failed:', e); return false; }
+    }
+
+    // Auth wiring
+    AuthUI.onLogin(async () => {
+      await loadFromStorage();
+    });
+    AuthUI.init();
+  </script>
+</body>
+</html>
