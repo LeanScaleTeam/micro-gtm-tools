@@ -25,12 +25,43 @@ const AuthUI = {
   _onLoginCallbacks: [],
 
   async init() {
-    // Check for hub token passthrough (?token=xxx&refresh_token=xxx)
     const params = new URLSearchParams(window.location.search);
+    const launchCode = params.get('launch_code');
     const hubToken = params.get('token');
     const hubRefreshToken = params.get('refresh_token');
-    if (hubToken) {
-      // Strip tokens from URL for security
+
+    if (launchCode) {
+      // Scoped launch code flow: redeem via Hub API for tokens
+      params.delete('launch_code');
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+
+      try {
+        const hubOrigin = window.__HUB_ORIGIN__ || 'https://lsapps.netlify.app';
+        const resp = await fetch(`${hubOrigin}/api/redeem-code?code=${encodeURIComponent(launchCode)}`);
+        if (resp.ok) {
+          const { accessToken, refreshToken } = await resp.json();
+          const { data: { session }, error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || accessToken,
+          });
+          if (session && !error) {
+            this._handleLogin(session);
+          } else {
+            this._showLogin();
+          }
+        } else {
+          console.warn('Launch code redemption failed, falling back to login');
+          this._showLogin();
+        }
+      } catch (err) {
+        console.error('Launch code redemption error:', err);
+        this._showLogin();
+      }
+    } else if (hubToken) {
+      // Legacy hub token passthrough (?token=xxx&refresh_token=xxx)
       params.delete('token');
       params.delete('refresh_token');
       const newUrl = params.toString()
@@ -38,7 +69,6 @@ const AuthUI = {
         : window.location.pathname;
       window.history.replaceState({}, '', newUrl);
 
-      // Set session using the hub token (use real refresh_token if provided)
       const { data: { session }, error } = await supabaseClient.auth.setSession({
         access_token: hubToken,
         refresh_token: hubRefreshToken || hubToken,
@@ -46,7 +76,6 @@ const AuthUI = {
       if (session && !error) {
         this._handleLogin(session);
       } else {
-        // If token was invalid, fall through to normal login
         this._showLogin();
       }
     } else {

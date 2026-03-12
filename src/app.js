@@ -36,6 +36,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api', requireAuth);
 
 // ── JSONB helpers ─────────────────────────────────────────
+// Tool state is freeform JSONB — validate it's a plain object at minimum
 async function getActiveConfig(req) {
   const { data: existing } = await supabaseAdmin
     .from('mc_configs').select('id')
@@ -77,6 +78,9 @@ app.get('/api/tools/:tool/state', async (req, res) => {
 
 app.put('/api/tools/:tool/state', async (req, res) => {
   try {
+    if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Expected a tool state object' });
+    }
     const configId = await getActiveConfig(req);
     await setSection(configId, `tool:${req.params.tool}`, req.body);
     logActivity({ tenantId: req.tenantId, userId: req.user.id, app: 'gtm-tools', action: 'save_tool_state', metadata: { tool: req.params.tool } });
