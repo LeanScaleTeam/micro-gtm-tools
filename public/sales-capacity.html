@@ -187,10 +187,28 @@
     <h1>👥 Sales Capacity Planner</h1>
     <div class="header-actions">
       <button class="btn" onclick="calculate()">📊 Calculate</button>
+      <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
 
+  <!-- Empty State / Onboarding -->
+  <div id="empty-state-container" style="display:none;">
+    <div class="empty-state-onboarding">
+      <div class="empty-icon">👥</div>
+      <h2>Sales Capacity Planner</h2>
+      <p>Plan sales headcount with segment templates, ramp schedules, and 24-month capacity forecasting.</p>
+      <button class="btn-get-started" onclick="document.getElementById('empty-state-container').style.display='none'; document.getElementById('main-content').style.display=''; openSegmentModal();">Get Started -- Create a Segment</button>
+      <ul class="feature-list">
+        <li>Define segment templates with custom quotas and ramp schedules</li>
+        <li>Add individual reps with start dates and ramp tracking</li>
+        <li>24-month capacity forecast with quarterly rollups</li>
+        <li>Company-wide and per-segment summaries</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="main-content">
   <div class="layout">
     <!-- Left Panel: Config -->
     <div>
@@ -341,6 +359,7 @@
     </div>
   </div>
 
+  </div><!-- end main-content -->
   </div><!-- end app-container -->
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -397,6 +416,7 @@
       renderSegments();
       closeSegmentModal();
       updateRepSegmentDropdown();
+      checkEmptyState();
       saveToStorage();
     }
 
@@ -406,6 +426,7 @@
       renderSegments();
       renderReps();
       updateRepSegmentDropdown();
+      checkEmptyState();
       saveToStorage();
     }
 
@@ -812,6 +833,29 @@
       window.print();
     }
 
+    function exportToolJSON() {
+      const data = {
+        name: 'Sales Capacity Planner',
+        exportedAt: new Date().toISOString(),
+        segments: segments,
+        reps: reps,
+        attainmentPct: document.getElementById('attainmentPct').value,
+        planStart: document.getElementById('planStart').value
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sales-capacity-plan.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function checkEmptyState() {
+      const isEmpty = segments.length === 0;
+      document.getElementById('empty-state-container').style.display = isEmpty ? 'block' : 'none';
+      document.getElementById('main-content').style.display = isEmpty ? 'none' : '';
+    }
+
     // ── State Persistence ──
     async function saveToStorage() {
       try {
@@ -853,6 +897,7 @@
     AuthUI.onLogin(async () => {
       const loaded = await loadFromStorage();
       if (!loaded) initDefaults();
+      checkEmptyState();
     });
     AuthUI.init();
   </script>

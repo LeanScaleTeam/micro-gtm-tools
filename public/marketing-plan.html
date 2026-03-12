@@ -173,10 +173,28 @@
     <h1>📣 Marketing Channel Planner</h1>
     <div class="header-actions">
       <button class="btn" onclick="calculate()">📊 Calculate</button>
+      <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
       <button class="btn btn-outline" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
 
+  <!-- Empty State / Onboarding -->
+  <div id="empty-state-container" style="display:none;">
+    <div class="empty-state-onboarding">
+      <div class="empty-icon">📣</div>
+      <h2>Marketing Channel Planner</h2>
+      <p>Allocate quarterly marketing budgets across channels with pipeline ROI and funnel projections.</p>
+      <button class="btn-get-started" onclick="document.getElementById('empty-state-container').style.display='none'; document.getElementById('main-content').style.display=''; openChannelModal();">Get Started -- Add Your First Channel</button>
+      <ul class="feature-list">
+        <li>Define channels with budget allocations and pipeline ratios</li>
+        <li>Quarterly pipeline and ROI forecasting</li>
+        <li>Full funnel projections (MQLs, SQLs, Bookings)</li>
+        <li>Per-channel and company-wide summaries</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="main-content">
   <div class="layout">
     <!-- Left Panel -->
     <div>
@@ -336,6 +354,7 @@
     </div>
   </div>
 
+  </div><!-- end main-content -->
   </div><!-- end app-container -->
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -408,6 +427,7 @@
       renderChannels();
       closeChannelModal();
       calculate();
+      checkEmptyState();
       saveToStorage();
     }
 
@@ -415,6 +435,7 @@
       channels = channels.filter(c => c.id !== id);
       renderChannels();
       calculate();
+      checkEmptyState();
       saveToStorage();
     }
 
@@ -633,6 +654,31 @@
       window.print();
     }
 
+    function exportToolJSON() {
+      const data = {
+        name: 'Marketing Channel Planner',
+        exportedAt: new Date().toISOString(),
+        channels: channels,
+        startYear: document.getElementById('startYear').value,
+        duration: document.getElementById('duration').value,
+        avgACV: document.getElementById('avgACV').value,
+        mqlToSql: document.getElementById('mqlToSql').value,
+        sqlToCw: document.getElementById('sqlToCw').value
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'marketing-channel-plan.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function checkEmptyState() {
+      const isEmpty = channels.length === 0;
+      document.getElementById('empty-state-container').style.display = isEmpty ? 'block' : 'none';
+      document.getElementById('main-content').style.display = isEmpty ? 'none' : '';
+    }
+
     // Update quarters when duration changes
     document.getElementById('duration').addEventListener('change', () => {
       const quarters = getQuarters();
@@ -701,6 +747,7 @@
     // Auth wiring
     AuthUI.onLogin(async () => {
       await loadFromStorage();
+      checkEmptyState();
     });
     AuthUI.init();
   </script>

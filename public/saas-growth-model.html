@@ -175,6 +175,7 @@
     <div class="header-actions">
       <button class="btn btn-green" onclick="addSegment()">+ Add Segment</button>
       <button class="btn" onclick="calculateAll()">📊 Generate Plan</button>
+      <button class="btn btn-outline" onclick="exportToolJSON()">📥 Export JSON</button>
     </div>
   </div>
 
@@ -182,6 +183,22 @@
     <button class="tab active" data-segment="rollup" onclick="switchTab('rollup')">
       📈 Company Rollup
     </button>
+  </div>
+
+  <!-- Empty State / Onboarding -->
+  <div id="empty-state-container" style="display:none;">
+    <div class="empty-state-onboarding">
+      <div class="empty-icon">📊</div>
+      <h2>SaaS Growth Model</h2>
+      <p>Build multi-segment B2B SaaS growth projections with 24-month ARR, pipeline, and profitability forecasting.</p>
+      <button class="btn-get-started" onclick="addSegment()">Get Started -- Add Your First Segment</button>
+      <ul class="feature-list">
+        <li>Model multiple customer segments (Enterprise, Mid-Market, SMB)</li>
+        <li>24-month revenue, pipeline, and headcount projections</li>
+        <li>Company-wide rollup with segment breakdowns</li>
+        <li>Gross margin and net profitability analysis</li>
+      </ul>
+    </div>
   </div>
 
   <!-- Company Rollup Panel -->
@@ -278,7 +295,8 @@
       const name = defaultNames[segments.length] || 'Segment ' + (segments.length + 1);
       
       segments.push({ id, name, color: SEGMENT_COLORS[colorIndex] });
-      
+      checkEmptyState();
+
       // Add tab
       const tab = document.createElement('button');
       tab.className = 'tab';
@@ -489,6 +507,7 @@
       
       switchTab('rollup');
       updateRollup();
+      checkEmptyState();
     }
     
     function calculateSegment(id) {
@@ -814,6 +833,29 @@
       document.getElementById('rollup-body').innerHTML = html;
     }
 
+    // ── Empty State ──
+    function checkEmptyState() {
+      const isEmpty = segments.length === 0;
+      document.getElementById('empty-state-container').style.display = isEmpty ? 'block' : 'none';
+      document.getElementById('panel-rollup').style.display = isEmpty ? 'none' : '';
+      document.getElementById('tabs').style.display = isEmpty ? 'none' : '';
+    }
+
+    // ── Export ──
+    function exportToolJSON() {
+      const data = {
+        name: 'SaaS Growth Model',
+        exportedAt: new Date().toISOString(),
+        state: collectState()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'saas-growth-model.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
     // ── State Persistence ──
     const INPUT_FIELDS = ['currentARR','eoyARR','year2ARR','avgDeal','winRate','salesCycle','nrr','churn','quota','repOTE','acctsPerCSM','csmSalary','repsPerMgr','mgrSalary','cogs','netMargin'];
 
@@ -895,6 +937,7 @@
     // Auth wiring
     AuthUI.onLogin(async () => {
       await loadFromStorage();
+      checkEmptyState();
     });
     AuthUI.init();
   </script>
