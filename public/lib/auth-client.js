@@ -193,8 +193,16 @@ const AuthUI = {
   },
 
   async signInWithMagicLink(email) {
-    const { error } = await supabaseClient.auth.signInWithOtp({ email });
-    if (error) throw error;
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes('rate limit')) {
+        throw new Error('Too many requests. Please wait a few minutes before trying again.');
+      }
+      throw error;
+    }
     return 'Check your email for the login link';
   },
 
